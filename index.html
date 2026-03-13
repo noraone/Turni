@@ -69,6 +69,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 .stat-num.blue{color:var(--vac-me);}
 .stat-num.purple{color:var(--swap);}
 .stat-label{font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:.2rem;}
+.stat-sub{font-size:.5rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:.1rem;opacity:.7;}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.2rem;}
 .card h3{font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;margin-bottom:1rem;}
 .btn{padding:.6rem 1.3rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.78rem;cursor:pointer;letter-spacing:.06em;border:1px solid;}
@@ -248,6 +249,19 @@ function getStatus(d){
 
 function isSwapDay(k){ return swaps.some(function(s){ return s.d1===k; }); }
 
+// Conta ferie totali nell'anno currentYear scorrendo gli overrides
+function countYearlyVacations(){
+  var vmYear=0, vsYear=0;
+  var yearStr=String(currentYear)+'-';
+  Object.keys(overrides).forEach(function(k){
+    if(k.indexOf(yearStr)===0){
+      if(overrides[k]==='vac-me') vmYear++;
+      else if(overrides[k]==='vac-sil') vsYear++;
+    }
+  });
+  return {vmYear:vmYear, vsYear:vsYear};
+}
+
 function showTab(n){
   for(var i=0;i<2;i++){
     document.getElementById('tab'+i).classList.toggle('active',i===n);
@@ -276,7 +290,7 @@ function render(){
     e.className='day empty';
     grid.appendChild(e);
   }
-  var wc=0,oc=0,vm=0,vs=0,sc=0;
+  var wc=0,oc=0,sc=0;
   for(var d=1;d<=last.getDate();d++){
     var date=new Date(currentYear,currentMonth,d);
     var k=dk(date);
@@ -284,8 +298,7 @@ function render(){
     var isTd=date.toDateString()===TODAY.toDateString();
     var isSw=isSwapDay(k);
     if(st==='work') wc++;
-    else if(st==='vac-me') vm++;
-    else if(st==='vac-sil') vs++;
+    else if(st==='vac-me'||st==='vac-sil') { /* counted yearly */ }
     else oc++;
     if(isSw) sc++;
     var cls='day';
@@ -305,12 +318,16 @@ function render(){
     grid.appendChild(div);
   }
   if(selMode) highlightRange();
+
+  // Totali annuali ferie
+  var yearly=countYearlyVacations();
+
   document.getElementById('stats').innerHTML=
-    '<div class="stat"><div class="stat-num">'+wc+'</div><div class="stat-label">Turni lavoro</div></div>'+
-    '<div class="stat"><div class="stat-num">'+oc+'</div><div class="stat-label">Giorni liberi</div></div>'+
-    '<div class="stat"><div class="stat-num purple">'+sc+'</div><div class="stat-label">Cambi turno</div></div>'+
-    '<div class="stat"><div class="stat-num blue">'+vm+'</div><div class="stat-label">Ferie mie</div></div>'+
-    '<div class="stat"><div class="stat-num" style="color:var(--vac-sil)">'+vs+'</div><div class="stat-label">Ferie Silvano</div></div>'+
+    '<div class="stat"><div class="stat-num">'+wc+'</div><div class="stat-label">Turni lavoro</div><div class="stat-sub">questo mese</div></div>'+
+    '<div class="stat"><div class="stat-num">'+oc+'</div><div class="stat-label">Giorni liberi</div><div class="stat-sub">questo mese</div></div>'+
+    '<div class="stat"><div class="stat-num purple">'+sc+'</div><div class="stat-label">Cambi turno</div><div class="stat-sub">questo mese</div></div>'+
+    '<div class="stat"><div class="stat-num blue">'+yearly.vmYear+'</div><div class="stat-label">Ferie mie</div><div class="stat-sub">totale '+currentYear+'</div></div>'+
+    '<div class="stat"><div class="stat-num" style="color:var(--vac-sil)">'+yearly.vsYear+'</div><div class="stat-label">Ferie Silvano</div><div class="stat-sub">totale '+currentYear+'</div></div>'+
     '<div class="stat" style="opacity:0"></div>';
 }
 
@@ -352,7 +369,6 @@ function updModal(){
 function saveModal(){
   if(!mDateKey) return;
   var k=mDateKey;
-  // Rimuovi swap esistente se cambi opzione
   var existingSwap=swaps.find(function(s){ return s.d1===k; });
   if(existingSwap && mOpt!=='swap'){
     swapDates=swapDates.filter(function(s){ return s.id!==existingSwap.id; });
@@ -599,8 +615,6 @@ function importaDati(event){
   reader.readAsText(file);
   event.target.value='';
 }
-
-
 
 loadData();
 render();
