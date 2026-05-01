@@ -1,624 +1,636 @@
 <!DOCTYPE html>
-
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Turni Lavoro</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,wght@0,300;0,600;0,800;1,300&display=swap" rel="stylesheet">
-<style>
-:root{--bg:#0f0e0c;--surface:#1a1814;--surface2:#242018;--border:#2e2a22;--accent:#ffaa00;--text:#f0ead8;--muted:#7a7060;--today:#7cc8a4;--vacation:#e87d6d;--swap:#a78bfa;--vac-me:#4a9eff;--vac-sil:#a78bfa;}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;padding:1.5rem 1rem 4rem;}
-.header{max-width:960px;margin:0 auto 1.5rem;display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--border);padding-bottom:1.2rem;flex-wrap:wrap;gap:.8rem;}
-.title{font-family:'Fraunces',serif;font-size:clamp(1.8rem,5vw,3rem);font-weight:800;color:var(--accent);line-height:1;}
-.subtitle{font-size:.68rem;color:var(--muted);margin-top:.4rem;letter-spacing:.15em;text-transform:uppercase;}
-.nav{display:flex;gap:.5rem;align-items:center;}
-.nav-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;}
-.month-label{font-family:'Fraunces',serif;font-size:1.3rem;font-weight:800;min-width:160px;text-align:center;color:var(--text);}
-.tabs{max-width:960px;margin:0 auto 1.5rem;display:flex;border-bottom:1px solid var(--border);}
-.tab{background:none;border:none;color:var(--muted);font-family:'DM Mono',monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;padding:.6rem 1rem .85rem;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
-.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
-.panel{display:none;max-width:960px;margin:0 auto;}
-.panel.active{display:block;}
-.legend{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.8rem;}
-.legend-item{display:flex;align-items:center;gap:.4rem;font-size:.63rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
-.legend-dot{width:9px;height:9px;border-radius:2px;}
-.segna-btn{display:block;width:100%;padding:.75rem;border-radius:10px;background:var(--accent);border:none;color:var(--bg);font-family:'DM Mono',monospace;font-size:.85rem;font-weight:700;cursor:pointer;margin-bottom:1rem;}
-.segna-btn.active{background:var(--vacation);color:#fff;}
-.sel-bar{display:none;background:rgba(232,125,109,.97);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1rem;}
-.sel-bar.visible{display:block;}
-.sel-bar-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.7rem;}
-.sel-bar-label{font-size:.82rem;color:#fff;font-weight:600;}
-.sel-bar-clear{background:none;border:none;color:rgba(255,255,255,.8);font-size:.78rem;cursor:pointer;font-family:'DM Mono',monospace;text-decoration:underline;}
-.sel-bar-btns{display:none;gap:.6rem;}
-.sel-bar-btns.visible{display:flex;}
-.sel-btn{padding:.6rem 1.1rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.8rem;cursor:pointer;border:1px solid;font-weight:700;}
-.sel-btn-me{background:#fff;border-color:#fff;color:var(--vacation);}
-.sel-btn-silvano{background:transparent;border-color:#fff;color:#fff;}
-.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;}
-.weekday{text-align:center;font-size:.62rem;color:var(--muted);padding:.4rem 0;letter-spacing:.1em;text-transform:uppercase;}
-.days-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
-.day{border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:5px 2px 4px;cursor:pointer;border:1px solid transparent;height:54px;}
-.day.empty{cursor:default;background:transparent!important;border:none!important;pointer-events:none;}
-.day.work{background:rgba(255,170,0,.18);border-color:rgba(255,170,0,.45);}
-.day.off{background:#222018;border-color:#3a3530;}
-.day.vac-me{background:rgba(74,158,255,.2);border-color:rgba(74,158,255,.55);}
-.day.vac-sil{background:rgba(167,139,250,.2);border-color:rgba(167,139,250,.55);}
-.day.swapped{outline:2px solid rgba(167,139,250,.6);outline-offset:-2px;}
-.day.today{border-color:var(--today)!important;box-shadow:0 0 0 1px rgba(124,200,164,.25);}
-.day.sel-start{outline:3px solid #fff!important;outline-offset:-2px;background:rgba(232,125,109,.5)!important;}
-.day.sel-range{background:rgba(232,125,109,.3)!important;border-color:rgba(232,125,109,.7)!important;}
-.day-num{font-size:.8rem;font-weight:700;width:100%;text-align:center;}
-.day.work .day-num{color:var(--accent);}
-.day.off .day-num{color:#c8bfaa;}
-.day.today .day-num{color:var(--today);font-weight:800;}
-.day.vac-me .day-num{color:var(--vac-me);}
-.day.vac-sil .day-num{color:var(--vac-sil);}
-.day.sel-start .day-num,.day.sel-range .day-num{color:#fff;}
-.day-icon{font-size:.68rem;width:100%;text-align:center;}
-.day.work .day-icon{color:var(--accent);}
-.day.swapped .day-icon{color:var(--swap);}
-.day-name{font-size:.45rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;width:100%;text-align:center;}
-.day.vac-me .day-name{color:var(--vac-me);}
-.day.vac-sil .day-name{color:var(--vac-sil);}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:1.2rem;}
-@media(max-width:500px){.stats{grid-template-columns:repeat(2,1fr);}}
-.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem;text-align:center;}
-.stat-num{font-family:'Fraunces',serif;font-size:1.8rem;font-weight:800;color:var(--accent);line-height:1;}
-.stat-num.blue{color:var(--vac-me);}
-.stat-num.purple{color:var(--swap);}
-.stat-label{font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:.2rem;}
-.stat-sub{font-size:.5rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:.1rem;opacity:.7;}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.2rem;}
-.card h3{font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;margin-bottom:1rem;}
-.btn{padding:.6rem 1.3rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.78rem;cursor:pointer;letter-spacing:.06em;border:1px solid;}
-.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600;}
-.btn-ghost{background:transparent;border-color:var(--border);color:var(--muted);}
-.item-list{display:flex;flex-direction:column;gap:.5rem;margin-top:.6rem;}
-.list-item{display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;}
-.list-item.swap-item{border-color:rgba(167,139,250,.3);}
-.item-main{font-size:.8rem;color:var(--text);font-weight:500;}
-.item-sub{font-size:.66rem;color:var(--muted);margin-top:.12rem;}
-.item-right{display:flex;align-items:center;gap:.8rem;}
-.item-count{font-family:'Fraunces',serif;font-size:1.1rem;font-weight:700;color:var(--vacation);}
-.del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:.2rem;}
-.empty-state{text-align:center;color:var(--muted);font-size:.76rem;padding:1.2rem 0;}
-.vantaggio-bar{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:1.2rem;}
-.vant-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center;}
-.vant-card.me{border-color:rgba(74,158,255,.3);}
-.vant-card.silvano{border-color:rgba(167,139,250,.3);}
-.vant-name{font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;}
-.vant-num{font-family:'Fraunces',serif;font-size:2rem;font-weight:800;line-height:1;}
-.vant-card.me .vant-num{color:var(--vac-me);}
-.vant-card.silvano .vant-num{color:var(--vac-sil);}
-.vant-sub{font-size:.58rem;color:var(--muted);margin-top:.3rem;}
-.vant-label{font-size:.62rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-align:center;margin-bottom:.8rem;}
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:100;align-items:center;justify-content:center;}
-.modal-overlay.active{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.8rem;width:min(400px,94vw);}
-.modal-title{font-family:'Fraunces',serif;font-size:1.4rem;font-weight:600;margin-bottom:.2rem;}
-.modal-date{font-size:.66rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:1.4rem;}
-.modal-sec-label{font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.55rem;}
-.opt-btns{display:flex;flex-direction:column;gap:.55rem;margin-bottom:1.3rem;}
-.opt-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.75rem 1rem;border-radius:10px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.8rem;text-align:left;}
-.opt-btn.sel-work{border-color:var(--accent);background:rgba(255,170,0,.12);color:var(--accent);}
-.opt-btn.sel-off{border-color:var(--muted);background:rgba(122,112,96,.12);}
-.opt-btn.sel-vac{border-color:var(--vac-me);background:rgba(74,158,255,.12);color:var(--vac-me);}
-.opt-btn.sel-swap{border-color:var(--swap);background:rgba(167,139,250,.12);color:var(--swap);}
-.modal-actions{display:flex;gap:.7rem;justify-content:flex-end;}
-.reset-link{display:block;text-align:center;background:none;border:none;color:var(--muted);font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;margin-top:.7rem;text-decoration:underline;}
-.data-bar{max-width:960px;margin:0 auto 1.2rem;display:flex;gap:.5rem;justify-content:flex-end;}
-.data-btn{background:var(--surface);border:1px solid var(--border);color:#fff;font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;padding:.45rem .85rem;border-radius:8px;cursor:pointer;}
-.data-btn:hover{border-color:var(--accent);color:var(--accent);}
-.import-input{display:none;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="MemoPersonale">
+    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23000000'/%3E%3Ctext x='90' y='110' text-anchor='middle' fill='white' font-size='80' font-family='sans-serif' font-weight='bold'%3EM%3C/text%3E%3C/svg%3E">
+    <title>MemoPersonale</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000; display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn { from { background: #000; } to { background: #f5f5f7; } }
+        .app {
+            width: 100%; max-width: 420px; height: 100vh; background: white;
+            display: flex; flex-direction: column;
+            opacity: 0; animation: showApp 0.3s 0.2s forwards;
+        }
+        @keyframes showApp { to { opacity: 1; } }
+        .header {
+            padding: 16px 24px; border-bottom: 1px solid #eee;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header h1 { font-size: 30px; font-weight: 800; color: #1a1a1a; letter-spacing: -0.5px; }
+        .header .subtitle { font-size: 13px; color: #888; margin-top: 2px; }
+        .tg-status { font-size: 18px; cursor: pointer; }
+        .categories { display: flex; gap: 8px; padding: 12px 24px; overflow-x: auto; }
+        .cat {
+            padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600;
+            white-space: nowrap; border: none; cursor: pointer;
+        }
+        .cat.all { background: #1a1a1a; color: white; }
+        .cat.lavoro { background: #e3f2fd; color: #1565c0; }
+        .cat.appuntamenti { background: #fce4ec; color: #c62828; }
+        .cat.cose { background: #fff3e0; color: #e65100; }
+        .cat.pagamenti { background: #e8f5e9; color: #2e7d32; }
+        .content { flex: 1; overflow-y: auto; padding: 8px 24px; }
+        .section-title { font-size: 20px; font-weight: 700; margin: 16px 0 10px; color: #1a1a1a; }
+        .section-subtitle { font-size: 13px; color: #999; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+        .card {
+            background: #fafafa; border-radius: 14px; padding: 14px 16px;
+            margin-bottom: 8px; border-left: 4px solid #ccc;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .card-left { display: flex; flex-direction: column; gap: 3px; cursor: pointer; flex: 1; }
+        .card-title { font-weight: 600; font-size: 15px; color: #1a1a1a; }
+        .card-time { font-size: 13px; color: #888; }
+        .card-cat { font-size: 11px; font-weight: 600; }
+        .card-notify { font-size: 10px; color: #e65100; font-weight: 600; margin-top: 2px; }
+        .card-actions { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+        .check {
+            width: 26px; height: 26px; border-radius: 50%; border: 2px solid #ddd;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .check.done { background: #4caf50; border-color: #4caf50; }
+        .check.done::after { content: "✓"; color: white; font-weight: bold; font-size: 13px; }
+        .add-btn {
+            position: fixed; bottom: 28px; right: 24px; width: 54px; height: 54px;
+            background: #1a1a1a; border-radius: 50%; color: white; font-size: 28px;
+            border: none; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s ease; z-index: 20;
+        }
+        .add-btn:active { transform: scale(0.9); }
+        .bottom-bar {
+            border-top: 1px solid #eee; padding: 12px 24px 24px;
+            display: flex; justify-content: space-around; font-size: 12px; color: #888;
+        }
+        .bottom-bar span { cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+        .bottom-bar .active { color: #1a1a1a; font-weight: 700; }
+        /* MODAL */
+        .modal-bg {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 100; align-items: flex-end; justify-content: center;
+        }
+        .modal-bg.open { display: flex; }
+        .modal {
+            background: white; border-radius: 20px 20px 0 0; padding: 24px;
+            width: 100%; max-width: 420px; animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal h3 { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+        .modal label { display: block; font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; margin-top: 10px; }
+        .modal input, .modal select {
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px;
+            font-size: 16px; font-family: inherit; outline: none; background: #f8f8f8;
+        }
+        .modal input:focus, .modal select:focus { border-color: #1a1a1a; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-primary {
+            flex: 2; padding: 14px; background: #1a1a1a; color: white;
+            border: none; border-radius: 12px; font-size: 16px; font-weight: 600;
+            cursor: pointer; font-family: inherit;
+        }
+        .btn-secondary {
+            flex: 1; padding: 14px; background: #f0f0f0; color: #666;
+            border: none; border-radius: 12px; font-size: 16px; cursor: pointer; font-family: inherit;
+        }
+        .btn-delete {
+            padding: 14px 20px; background: #fce4ec; color: #c62828;
+            border: none; border-radius: 12px; font-size: 16px; cursor: pointer; font-family: inherit;
+        }
+        /* SETTINGS */
+        .settings-view { display: none; flex: 1; overflow-y: auto; padding: 16px 24px; }
+        .settings-view.active { display: block; }
+        .settings-section { margin-bottom: 28px; }
+        .settings-section h2 { font-size: 18px; font-weight: 700; margin-bottom: 14px; color: #1a1a1a; }
+        .settings-row { margin-bottom: 12px; }
+        .settings-row label { display: block; font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .settings-row input, .settings-row select {
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px;
+            font-size: 15px; font-family: inherit; outline: none; background: #f8f8f8;
+        }
+        .settings-row input:focus { border-color: #1a1a1a; }
+        .btn-test {
+            width: 100%; padding: 14px; background: #1a1a1a; color: white;
+            border: none; border-radius: 12px; font-size: 16px; font-weight: 600;
+            cursor: pointer; font-family: inherit; margin-top: 8px;
+        }
+        .btn-test:active { opacity: 0.8; }
+        .status-msg { font-size: 13px; margin-top: 8px; padding: 8px 12px; border-radius: 8px; display: none; }
+        .status-msg.ok { background: #e8f5e9; color: #2e7d32; display: block; }
+        .status-msg.err { background: #fce4ec; color: #c62828; display: block; }
+        .info-box { background: #f8f8f8; border-radius: 12px; padding: 14px; font-size: 13px; color: #555; line-height: 1.6; }
+        .info-box a { color: #1565c0; }
+        .escalation-row { display: flex; align-items: center; gap: 10px; }
+        .escalation-row input[type=number] { width: 70px; padding: 10px; }
+    </style>
 </head>
 <body>
 
-<div class="header">
-  <div>
-    <div class="title">Turni</div>
-    <div class="subtitle">Calendario lavoro · Due soci ✓</div>
-  </div>
-  <div class="nav">
-    <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
-    <div class="month-label" id="monthLabel"></div>
-    <button class="nav-btn" onclick="changeMonth(1)">&#8594;</button>
-  </div>
+<div class="app">
+    <div class="header">
+        <div>
+            <h1>MemoPersonale</h1>
+            <p class="subtitle" id="headerSubtitle">La tua app su misura</p>
+        </div>
+        <span class="tg-status" id="tgStatus" onclick="showSettings()" title="Impostazioni Telegram">⚙️</span>
+    </div>
+
+    <!-- TAB: PROMEMORIA -->
+    <div id="mainView" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+        <div class="categories">
+            <button class="cat all" onclick="filterCat('all',this)">Tutti</button>
+            <button class="cat lavoro" onclick="filterCat('lavoro',this)">💼 Lavoro</button>
+            <button class="cat appuntamenti" onclick="filterCat('appuntamenti',this)">📅 Appuntamenti</button>
+            <button class="cat cose" onclick="filterCat('cose',this)">✅ Cose da fare</button>
+            <button class="cat pagamenti" onclick="filterCat('pagamenti',this)">💳 Pagamenti</button>
+        </div>
+        <div class="content" id="content">
+            <p class="section-title">Oggi</p>
+            <div id="reminders-list"></div>
+        </div>
+        <button class="add-btn" onclick="openModal()">+</button>
+    </div>
+
+    <!-- TAB: IMPOSTAZIONI -->
+    <div class="settings-view" id="settingsView">
+        <div class="settings-section">
+            <h2>🔔 Notifiche Telegram</h2>
+
+            <div class="info-box" style="margin-bottom:14px;">
+                Per trovare il tuo <strong>Chat ID</strong>:<br>
+                1. Scrivi un messaggio a <strong>@MemoPersonale1_bot</strong><br>
+                2. Apri questo link:<br>
+                <a href="https://api.telegram.org/bot8505970290:AAF-cMPbU7KwRmCdDVenXmIbR4IqJUue4Us/getUpdates" target="_blank">getUpdates →</a><br>
+                3. Cerca <code>"id":</code> nel risultato e copia il numero
+            </div>
+
+            <div class="settings-row">
+                <label>Token Bot</label>
+                <input type="text" id="tgToken" placeholder="1234567890:AAF-xxx..." autocomplete="off">
+            </div>
+            <div class="settings-row">
+                <label>Chat ID</label>
+                <input type="text" id="tgChatId" placeholder="Es. 123456789" autocomplete="off" inputmode="numeric">
+            </div>
+            <button class="btn-test" onclick="saveTgSettings()">💾 Salva impostazioni</button>
+            <button class="btn-test" style="background:#1565c0;margin-top:8px;" onclick="testTelegram()">📨 Invia messaggio di test</button>
+            <div class="status-msg" id="tgStatusMsg"></div>
+        </div>
+
+        <div class="settings-section">
+            <h2>🔄 Aggiorna software</h2>
+            <div class="settings-row">
+                <label>GitHub Token</label>
+                <input type="password" id="ghToken" placeholder="ghp_..." autocomplete="off">
+            </div>
+            <button class="btn-test" onclick="saveGhToken()">💾 Salva Token</button>
+            <button class="btn-test" style="background:#1565c0;margin-top:8px;" onclick="aggiornaApp()">🔄 Aggiorna app su GitHub</button>
+            <div class="status-msg" id="ghMsg"></div>
+        </div>
+
+        <div class="settings-section">
+            <h2>⏱ Escalation</h2>
+            <div class="settings-row">
+                <label>Secondo messaggio dopo (minuti)</label>
+                <div class="escalation-row">
+                    <input type="number" id="escalationMin" min="5" max="120" value="15">
+                    <span style="font-size:13px;color:#888;">minuti dal primo avviso</span>
+                </div>
+            </div>
+            <button class="btn-test" onclick="saveEscalation()">💾 Salva</button>
+            <div class="status-msg" id="escalationMsg"></div>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <span class="active" id="tabMain" onclick="showMain()">📋 Promemoria</span>
+        <span id="tabSettings" onclick="showSettings()">⚙️ Impostazioni</span>
+    </div>
 </div>
 
-<div class="tabs">
-  <button class="tab active" id="tab0" onclick="showTab(0)">📅 Calendario</button>
-  <button class="tab" id="tab1" onclick="showTab(1)">🌴 Ferie</button>
-</div>
-
-<div class="data-bar">
-  <button class="data-btn" onclick="esportaDati()">&#8595; Esporta dati</button>
-  <label class="data-btn" for="importFile">&#8593; Importa dati</label>
-  <input class="import-input" type="file" id="importFile" accept=".json" onchange="importaDati(event)">
-</div>
-
-<div class="panel active" id="panel0">
-  <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Il mio turno</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#222018;border:1px solid #3a3530"></div>Libero</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--today)"></div>Oggi</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--vac-me)"></div>Ferie mie</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--vac-sil)"></div>Ferie Silvano</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--swap);border-radius:50%"></div>Cambio turno</div>
-  </div>
-  <button class="segna-btn" id="segnaBtnMain" onclick="toggleSelMode()">🌴 Segna ferie</button>
-  <div class="sel-bar" id="selBar">
-    <div class="sel-bar-top">
-      <div class="sel-bar-label" id="selBarLabel">Tocca il primo giorno</div>
-      <button class="sel-bar-clear" onclick="clearSelection()">Annulla</button>
+<!-- MODAL PROMEMORIA -->
+<div class="modal-bg" id="modalBg" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <h3 id="modalTitle">Nuovo promemoria</h3>
+        <input type="hidden" id="editId">
+        <label>Titolo</label>
+        <input type="text" id="titleInput" placeholder="Cosa devi ricordare?">
+        <label>Categoria</label>
+        <select id="catInput">
+            <option value="lavoro">💼 Lavoro</option>
+            <option value="appuntamenti">📅 Appuntamenti</option>
+            <option value="cose">✅ Cose da fare</option>
+            <option value="pagamenti">💳 Pagamenti</option>
+        </select>
+        <label>Data e ora</label>
+        <input type="datetime-local" id="dateInput">
+        <div class="modal-buttons">
+            <button class="btn-primary" id="saveBtn" onclick="saveReminder()">✅ Salva</button>
+            <button class="btn-secondary" onclick="closeModal()">Chiudi</button>
+            <button class="btn-delete" id="deleteBtn" onclick="deleteReminderFromModal()" style="display:none;">🗑</button>
+        </div>
     </div>
-    <div class="sel-bar-btns" id="selBarBtns">
-      <button class="sel-btn sel-btn-me" onclick="salvaFerieSelezionate('me')">🌴 Ferie mie</button>
-      <button class="sel-btn sel-btn-silvano" onclick="salvaFerieSelezionate('silvano')">🌴 Ferie Silvano</button>
-    </div>
-  </div>
-  <div class="weekdays" id="weekdays"></div>
-  <div class="days-grid" id="daysGrid"></div>
-  <div class="stats" id="stats"></div>
-</div>
-
-<div class="panel" id="panel1">
-  <div class="vant-label">Volte con ferie vantaggiose (l'altro lavorava di più)</div>
-  <div class="vantaggio-bar">
-    <div class="vant-card me">
-      <div class="vant-name">Io</div>
-      <div class="vant-num" id="vantMe">0</div>
-      <div class="vant-sub">ferie vantaggiose</div>
-    </div>
-    <div class="vant-card silvano">
-      <div class="vant-name">Silvano</div>
-      <div class="vant-num" id="vantSil">0</div>
-      <div class="vant-sub">ferie vantaggiose</div>
-    </div>
-  </div>
-  <div class="card">
-    <h3 style="color:var(--vacation)">📋 Ferie registrate</h3>
-    <div id="vacationList"><div class="empty-state">Nessuna ferie registrata</div></div>
-  </div>
-  <div class="card">
-    <h3 style="color:var(--swap)">🔄 Cambi turno registrati</h3>
-    <div id="swapList"><div class="empty-state">Nessun cambio registrato</div></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modalOverlay" onclick="bgCloseModal(event)">
-  <div class="modal">
-    <div class="modal-title" id="modalTitle"></div>
-    <div class="modal-date" id="modalDate"></div>
-    <div class="modal-sec-label">Stato giornata</div>
-    <div class="opt-btns">
-      <button class="opt-btn" id="optWork" onclick="selectOpt('work')">🟡 Il mio turno di lavoro</button>
-      <button class="opt-btn" id="optOff" onclick="selectOpt('off')">⚫ Giorno libero</button>
-      <button class="opt-btn" id="optVac" onclick="selectOpt('vacation')">🌴 In ferie</button>
-      <button class="opt-btn" id="optSwap" onclick="selectOpt('swap')">🔄 Cambio turno</button>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal()">Annulla</button>
-      <button class="btn btn-primary" onclick="saveModal()">Salva</button>
-    </div>
-    <button class="reset-link" id="resetLink" onclick="resetModal()">Ripristina originale</button>
-  </div>
 </div>
 
 <script>
-var ANCHOR = new Date(2026, 2, 8);
-var CYCLE  = [true,true,false,true,false,true,true,false,false,true,false,true,false,false];
-var TODAY  = new Date(2026, 2, 7);
-var M  = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-var DF = ['Domenica','Lunedi','Martedi','Mercoledi','Giovedi','Venerdi','Sabato'];
-var currentYear = 2026, currentMonth = 2;
+// ── DATI ────────────────────────────────────────────────────────────────────
+let reminders = JSON.parse(localStorage.getItem('memoReminders') || '[]');
+let currentFilter = 'all';
 
-var overrides  = {};
-var vacations  = [];
-var swaps      = [];
-var swapDates  = [];
-var uid        = 1;
-var selMode = false, selStep = 0, selStart = null, selEnd = null;
-var mDateKey = null, mOpt = null;
-
-function dk(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-function kd(k){ var p=k.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
-
-function isWorkDay(d){
-  var dU=Date.UTC(d.getFullYear(),d.getMonth(),d.getDate());
-  var aU=Date.UTC(2026,2,8);
-  var diff=Math.round((dU-aU)/86400000);
-  var base=CYCLE[((diff%14)+14)%14];
-  var inv=0;
-  for(var i=0;i<swapDates.length;i++){
-    var sU=Date.UTC(swapDates[i].date.getFullYear(),swapDates[i].date.getMonth(),swapDates[i].date.getDate());
-    if(sU<=dU) inv++;
-  }
-  return inv%2===0 ? base : !base;
+function saveReminders() {
+    localStorage.setItem('memoReminders', JSON.stringify(reminders));
 }
 
-function isVac(st){ return st==='vac-me'||st==='vac-sil'; }
+// ── IMPOSTAZIONI TELEGRAM ────────────────────────────────────────────────────
+function getTgToken()  { return localStorage.getItem('memo_tg_token') || '8505970290:AAF-cMPbU7KwRmCdDVenXmIbR4IqJUue4Us'; }
+function getTgChatId() { return localStorage.getItem('memo_tg_chatid') || '8684153642'; }
+function getEscalationMin() { return parseInt(localStorage.getItem('memo_escalation_min') || '15', 10); }
 
-function getStatus(d){
-  var k=dk(d);
-  if(overrides[k]) return overrides[k];
-  return isWorkDay(d)?'work':'off';
-}
-
-function isSwapDay(k){ return swaps.some(function(s){ return s.d1===k; }); }
-
-// Conta ferie totali nell'anno currentYear scorrendo gli overrides
-function countYearlyVacations(){
-  var vmYear=0, vsYear=0;
-  var yearStr=String(currentYear)+'-';
-  Object.keys(overrides).forEach(function(k){
-    if(k.indexOf(yearStr)===0){
-      if(overrides[k]==='vac-me') vmYear++;
-      else if(overrides[k]==='vac-sil') vsYear++;
+function saveTgSettings() {
+    const token  = document.getElementById('tgToken').value.trim();
+    const chatId = document.getElementById('tgChatId').value.trim();
+    if (!token || !chatId) {
+        showMsg('tgStatusMsg', 'err', '⚠️ Inserisci sia Token che Chat ID');
+        return;
     }
-  });
-  return {vmYear:vmYear, vsYear:vsYear};
+    localStorage.setItem('memo_tg_token', token);
+    localStorage.setItem('memo_tg_chatid', chatId);
+    showMsg('tgStatusMsg', 'ok', '✅ Impostazioni salvate');
+    updateTgIcon();
 }
 
-function showTab(n){
-  for(var i=0;i<2;i++){
-    document.getElementById('tab'+i).classList.toggle('active',i===n);
-    document.getElementById('panel'+i).classList.toggle('active',i===n);
-  }
-  if(n===1){ renderVacList(); renderSwapList(); }
-}
-
-function changeMonth(dir){
-  currentMonth+=dir;
-  if(currentMonth>11){currentMonth=0;currentYear++;}
-  if(currentMonth<0){currentMonth=11;currentYear--;}
-  render();
-}
-
-function render(){
-  document.getElementById('monthLabel').textContent=M[currentMonth]+' '+currentYear;
-  document.getElementById('weekdays').innerHTML=['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(function(d){return '<div class="weekday">'+d+'</div>';}).join('');
-  var grid=document.getElementById('daysGrid');
-  grid.innerHTML='';
-  var first=new Date(currentYear,currentMonth,1);
-  var last=new Date(currentYear,currentMonth+1,0);
-  var pad=first.getDay()-1; if(pad<0) pad=6;
-  for(var i=0;i<pad;i++){
-    var e=document.createElement('div');
-    e.className='day empty';
-    grid.appendChild(e);
-  }
-  var wc=0,oc=0,sc=0;
-  for(var d=1;d<=last.getDate();d++){
-    var date=new Date(currentYear,currentMonth,d);
-    var k=dk(date);
-    var st=getStatus(date);
-    var isTd=date.toDateString()===TODAY.toDateString();
-    var isSw=isSwapDay(k);
-    if(st==='work') wc++;
-    else if(st==='vac-me'||st==='vac-sil') { /* counted yearly */ }
-    else oc++;
-    if(isSw) sc++;
-    var cls='day';
-    if(st==='vac-me') cls+=' vac-me';
-    else if(st==='vac-sil') cls+=' vac-sil';
-    else if(st==='work') cls+=' work';
-    else cls+=' off';
-    if(isSw) cls+=' swapped';
-    if(isTd) cls+=' today';
-    var icon=isVac(st)?'&#127796;':isSw?'&#8644;':st==='work'?'L':'';
-    var name=st==='vac-me'?'Io':st==='vac-sil'?'Silvano':'';
-    var div=document.createElement('div');
-    div.className=cls;
-    div.setAttribute('data-key',k);
-    div.innerHTML='<span class="day-num">'+d+'</span><span class="day-icon">'+icon+'</span><span class="day-name">'+name+'</span>';
-    div.onclick=function(){ handleDayClick(this.getAttribute('data-key')); };
-    grid.appendChild(div);
-  }
-  if(selMode) highlightRange();
-
-  // Totali annuali ferie
-  var yearly=countYearlyVacations();
-
-  document.getElementById('stats').innerHTML=
-    '<div class="stat"><div class="stat-num">'+wc+'</div><div class="stat-label">Turni lavoro</div><div class="stat-sub">questo mese</div></div>'+
-    '<div class="stat"><div class="stat-num">'+oc+'</div><div class="stat-label">Giorni liberi</div><div class="stat-sub">questo mese</div></div>'+
-    '<div class="stat"><div class="stat-num purple">'+sc+'</div><div class="stat-label">Cambi turno</div><div class="stat-sub">questo mese</div></div>'+
-    '<div class="stat"><div class="stat-num blue">'+yearly.vmYear+'</div><div class="stat-label">Ferie mie</div><div class="stat-sub">totale '+currentYear+'</div></div>'+
-    '<div class="stat"><div class="stat-num" style="color:var(--vac-sil)">'+yearly.vsYear+'</div><div class="stat-label">Ferie Silvano</div><div class="stat-sub">totale '+currentYear+'</div></div>'+
-    '<div class="stat" style="opacity:0"></div>';
-}
-
-function handleDayClick(k){
-  if(selMode){ handleSelClick(k); return; }
-  openModal(k);
-}
-
-function openModal(k){
-  mDateKey=k;
-  var d=kd(k), st=getStatus(d);
-  if(isSwapDay(k)) mOpt='swap';
-  else if(isVac(st)) mOpt='vacation';
-  else mOpt=st;
-  var DF2=DF;
-  document.getElementById('modalTitle').textContent=DF2[d.getDay()]+' '+d.getDate();
-  document.getElementById('modalDate').textContent=d.getDate()+' '+M[d.getMonth()]+' '+d.getFullYear();
-  document.getElementById('resetLink').style.display=(overrides[k]||isSwapDay(k))?'block':'none';
-  updModal();
-  document.getElementById('modalOverlay').classList.add('active');
-}
-
-function closeModal(){
-  document.getElementById('modalOverlay').classList.remove('active');
-  mDateKey=null; mOpt=null;
-}
-
-function bgCloseModal(e){ if(e.target.id==='modalOverlay') closeModal(); }
-
-function selectOpt(o){ mOpt=o; updModal(); }
-
-function updModal(){
-  document.getElementById('optWork').className='opt-btn'+(mOpt==='work'?' sel-work':'');
-  document.getElementById('optOff').className='opt-btn'+(mOpt==='off'?' sel-off':'');
-  document.getElementById('optVac').className='opt-btn'+(mOpt==='vacation'?' sel-vac':'');
-  document.getElementById('optSwap').className='opt-btn'+(mOpt==='swap'?' sel-swap':'');
-}
-
-function saveModal(){
-  if(!mDateKey) return;
-  var k=mDateKey;
-  var existingSwap=swaps.find(function(s){ return s.d1===k; });
-  if(existingSwap && mOpt!=='swap'){
-    swapDates=swapDates.filter(function(s){ return s.id!==existingSwap.id; });
-    swaps=swaps.filter(function(s){ return s.id!==existingSwap.id; });
-  }
-  if(mOpt==='swap'){
-    if(!existingSwap){
-      var d=kd(k);
-      var l1=DF[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1);
-      var id=uid++;
-      swapDates.push({date:new Date(d.getTime()),id:id});
-      swaps.push({id:id,d1:k,l1:l1});
+function saveEscalation() {
+    const min = parseInt(document.getElementById('escalationMin').value, 10);
+    if (isNaN(min) || min < 1) {
+        showMsg('escalationMsg', 'err', '⚠️ Valore non valido');
+        return;
     }
-    delete overrides[k];
-  } else if(mOpt==='vacation'){
-    overrides[k]='vac-me';
-  } else {
-    overrides[k]=mOpt;
-  }
-  document.getElementById('modalOverlay').classList.remove('active');
-  mDateKey=null; mOpt=null;
-  render(); saveData();
+    localStorage.setItem('memo_escalation_min', min);
+    showMsg('escalationMsg', 'ok', '✅ Salvato: escalation dopo ' + min + ' minuti');
 }
 
-function resetModal(){
-  if(!mDateKey) return;
-  var k=mDateKey;
-  delete overrides[k];
-  var existingSwap=swaps.find(function(s){ return s.d1===k; });
-  if(existingSwap){
-    swapDates=swapDates.filter(function(s){ return s.id!==existingSwap.id; });
-    swaps=swaps.filter(function(s){ return s.id!==existingSwap.id; });
-  }
-  document.getElementById('modalOverlay').classList.remove('active');
-  mDateKey=null; mOpt=null;
-  render(); saveData();
+function showMsg(id, type, text) {
+    const el = document.getElementById(id);
+    el.className = 'status-msg ' + type;
+    el.textContent = text;
+    setTimeout(() => { el.className = 'status-msg'; }, 4000);
 }
 
-function toggleSelMode(){
-  if(selMode){clearSelection();return;}
-  selMode=true;selStep=1;selStart=null;selEnd=null;
-  document.getElementById('selBar').classList.add('visible');
-  document.getElementById('selBarBtns').style.display='none';
-  document.getElementById('selBarLabel').textContent='Tocca il primo giorno';
-  var btn=document.getElementById('segnaBtnMain');
-  btn.textContent='Annulla';btn.classList.add('active');
+function saveGhToken() {
+    const token = document.getElementById('ghToken').value.trim();
+    if (!token) { showMsg('ghMsg', 'err', '⚠️ Inserisci il token GitHub'); return; }
+    localStorage.setItem('memo_gh_token', token);
+    showMsg('ghMsg', 'ok', '✅ Token salvato');
 }
 
-function clearSelection(){
-  selMode=false;selStep=0;selStart=null;selEnd=null;
-  document.getElementById('selBar').classList.remove('visible');
-  document.getElementById('selBarBtns').style.display='none';
-  var btn=document.getElementById('segnaBtnMain');
-  btn.textContent='🌴 Segna ferie';btn.classList.remove('active');
-  highlightRange();
-}
+async function aggiornaApp() {
+    const ghToken = localStorage.getItem('memo_gh_token') || '';
+    if (!ghToken) { showMsg('ghMsg', 'err', '⚠️ Prima salva il token GitHub'); return; }
 
-function handleSelClick(k){
-  var date=kd(k);
-  if(selStep===1){
-    selStart=date;selStep=2;
-    document.getElementById('selBarLabel').textContent='Ora tocca l ultimo giorno';
-    highlightRange();
-  } else if(selStep===2){
-    selEnd=date;
-    if(selEnd<selStart){var t=selStart;selStart=selEnd;selEnd=t;}
-    selStep=3;
-    var n=Math.round((Date.UTC(selEnd.getFullYear(),selEnd.getMonth(),selEnd.getDate())-Date.UTC(selStart.getFullYear(),selStart.getMonth(),selStart.getDate()))/86400000)+1;
-    document.getElementById('selBarLabel').textContent=n+' giorn'+(n===1?'o':'i')+' selezionat'+(n===1?'o':'i');
-    document.getElementById('selBarBtns').style.display='flex';
-    highlightRange();
-  } else {
-    selStart=date;selEnd=null;selStep=2;
-    document.getElementById('selBarLabel').textContent='Ora tocca l ultimo giorno';
-    document.getElementById('selBarBtns').style.display='none';
-    highlightRange();
-  }
-}
+    const btn = document.querySelector('button[onclick="aggiornaApp()"]');
+    btn.textContent = '⏳ Aggiornamento in corso...';
+    btn.disabled = true;
 
-function highlightRange(){
-  document.querySelectorAll('.day.sel-start,.day.sel-range').forEach(function(el){el.classList.remove('sel-start');el.classList.remove('sel-range');});
-  if(!selStart) return;
-  var end=selEnd||selStart,cur=new Date(selStart);
-  while(cur<=end){
-    var el=document.querySelector('[data-key="'+dk(cur)+'"]');
-    if(el) el.classList.add(cur.getTime()===selStart.getTime()||cur.getTime()===end.getTime()?'sel-start':'sel-range');
-    cur.setDate(cur.getDate()+1);
-  }
-}
+    try {
+        // 1. Leggi SHA del file attuale
+        const infoRes = await fetch('https://api.github.com/repos/noraone/MemoPersonale/contents/index.html', {
+            headers: { 'Authorization': 'token ' + ghToken, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        if (!infoRes.ok) throw new Error('Errore lettura file: ' + infoRes.status);
+        const info = await infoRes.json();
+        const sha = info.sha;
 
-function salvaFerieSelezionate(chi){
-  if(!selStart) return;
-  var from=new Date(selStart),to=selEnd?new Date(selEnd):new Date(selStart);
-  var days=[],cur=new Date(from);
-  while(cur<=to){days.push(dk(cur));cur.setDate(cur.getDate()+1);}
-  var st=chi==='me'?'vac-me':'vac-sil';
-  days.forEach(function(k){overrides[k]=st;});
-  vacations.push({id:uid++,who:chi==='me'?'Io':'Silvano',from:from,to:to,workDays:days.length,days:days});
-  clearSelection();render();saveData();
-  showTab(1);
-}
+        // 2. Leggi il codice sorgente di questa pagina
+        const content = document.documentElement.outerHTML;
+        const encoded = btoa(unescape(encodeURIComponent(content)));
 
-function analizzaFerie(who, days){
-  var inverted=(who==='silvano');
-  var chiLav=0, altroLav=0;
-  days.forEach(function(k){
-    var p=k.split('-').map(Number);
-    var d=new Date(p[0],p[1]-1,p[2]);
-    var dU=Date.UTC(d.getFullYear(),d.getMonth(),d.getDate());
-    var aU=Date.UTC(2026,2,8);
-    var diff=Math.round((dU-aU)/86400000);
-    var base=CYCLE[((diff%14)+14)%14];
-    if(inverted?!base:base) chiLav++;
-    if(inverted?base:!base) altroLav++;
-  });
-  return {chiLav:chiLav, altroLav:altroLav, vantaggio:altroLav>chiLav};
-}
-
-function aggiornaVantaggio(){
-  var totMe=0, totSil=0;
-  vacations.forEach(function(v){
-    var who=v.who==='Io'?'me':'silvano';
-    var r=analizzaFerie(who,v.days);
-    if(r.vantaggio){
-      if(who==='me') totMe++;
-      else totSil++;
+        // 3. Carica su GitHub
+        const updateRes = await fetch('https://api.github.com/repos/noraone/MemoPersonale/contents/index.html', {
+            method: 'PUT',
+            headers: {
+                'Authorization': 'token ' + ghToken,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: 'Update index.html via app',
+                content: encoded,
+                sha: sha
+            })
+        });
+        if (!updateRes.ok) throw new Error('Errore upload: ' + updateRes.status);
+        showMsg('ghMsg', 'ok', '✅ App aggiornata! Attendi 1-2 minuti.');
+    } catch(e) {
+        showMsg('ghMsg', 'err', '❌ ' + e.message);
     }
-  });
-  document.getElementById('vantMe').textContent=totMe;
-  document.getElementById('vantSil').textContent=totSil;
+
+    btn.textContent = '🔄 Aggiorna app su GitHub';
+    btn.disabled = false;
 }
 
-function renderVacList(){
-  var el=document.getElementById('vacationList');
-  aggiornaVantaggio();
-  if(!vacations.length){el.innerHTML='<div class="empty-state">Nessuna ferie registrata</div>';return;}
-  el.innerHTML='<div class="item-list">'+vacations.map(function(v){
-    var who=v.who==='Io'?'me':'silvano';
-    var r=analizzaFerie(who,v.days);
-    var badge=r.vantaggio?'<span style="font-size:.6rem;color:var(--accent);margin-left:.5rem;">↑ vantaggio</span>':'';
-    return '<div class="list-item"><div><div class="item-main">'+v.who+badge+'</div><div class="item-sub">'+v.from.getDate()+' '+M[v.from.getMonth()]+' &rarr; '+v.to.getDate()+' '+M[v.to.getMonth()]+' '+v.to.getFullYear()+'</div></div><div class="item-right"><div class="item-count">'+v.workDays+'gg</div><button class="del-btn" onclick="deleteVac('+v.id+')">&#10005;</button></div></div>';
-  }).join('')+'</div>';
+function updateTgIcon() {
+    const icon = document.getElementById('tgStatus');
+    const sub  = document.getElementById('headerSubtitle');
+    if (getTgToken() && getTgChatId()) {
+        icon.textContent = '🔔';
+        sub.textContent = 'Notifiche Telegram attive';
+    } else {
+        icon.textContent = '⚙️';
+        sub.textContent = 'La tua app su misura';
+    }
 }
 
-function deleteVac(id){
-  var v=vacations.find(function(x){return x.id===id;});if(!v)return;
-  v.days.forEach(function(k){if(overrides[k]==='vac-me'||overrides[k]==='vac-sil')delete overrides[k];});
-  vacations=vacations.filter(function(x){return x.id!==id;});
-  renderVacList();render();saveData();
+async function sendTelegram(text) {
+    const token  = getTgToken();
+    const chatId = getTgChatId();
+    if (!token || !chatId) return false;
+    try {
+        const res = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
+        });
+        const data = await res.json();
+        return data.ok === true;
+    } catch(e) {
+        return false;
+    }
 }
 
-function renderSwapList(){
-  var el=document.getElementById('swapList');
-  if(!swaps.length){el.innerHTML='<div class="empty-state">Nessun cambio registrato</div>';return;}
-  el.innerHTML='<div class="item-list">'+swaps.map(function(s){
-    return '<div class="list-item swap-item"><div><div class="item-main" style="color:var(--swap)">Dal '+s.l1+' in poi</div><div class="item-sub">Turni invertiti</div></div><button class="del-btn" onclick="deleteSwap('+s.id+')">&#10005;</button></div>';
-  }).join('')+'</div>';
+async function testTelegram() {
+    const btn = document.querySelector('.btn-test[onclick="testTelegram()"]');
+    btn.textContent = '⏳ Invio...';
+    btn.disabled = true;
+    const ok = await sendTelegram('👋 <b>MemoPersonale</b>\nTest notifica: tutto funziona correttamente!');
+    showMsg('tgStatusMsg', ok ? 'ok' : 'err', ok ? '✅ Messaggio inviato! Controlla Telegram.' : '❌ Errore: controlla Token e Chat ID');
+    btn.textContent = '📨 Invia messaggio di test';
+    btn.disabled = false;
 }
 
-function deleteSwap(id){
-  swapDates=swapDates.filter(function(s){return s.id!==id;});
-  swaps=swaps.filter(function(s){return s.id!==id;});
-  renderSwapList();render();
-}
+// ── CONTROLLO SCADENZE ───────────────────────────────────────────────────────
+function checkDeadlines() {
+    const now = Date.now();
+    const escalMs = getEscalationMin() * 60 * 1000;
+    let changed = false;
 
-// ── PERSISTENZA ──────────────────────────────────────────────────────
-function saveData(){
-  try{
-    var data={
-      overrides: overrides,
-      vacations: vacations.map(function(v){
-        return {id:v.id,who:v.who,from:v.from.toISOString(),to:v.to.toISOString(),workDays:v.workDays,days:v.days};
-      }),
-      swaps: swaps,
-      swapDates: swapDates.map(function(s){
-        return {id:s.id,date:s.date.toISOString()};
-      }),
-      uid: uid
-    };
-    localStorage.setItem('turni_v1', JSON.stringify(data));
-  }catch(e){}
-}
+    reminders.forEach(r => {
+        if (r.done) return;
+        const dueMs = new Date(r.dateTime).getTime();
+        if (isNaN(dueMs)) return;
 
-function loadData(){
-  try{
-    var raw=localStorage.getItem('turni_v1');
-    if(!raw) return;
-    var data=JSON.parse(raw);
-    overrides=data.overrides||{};
-    uid=data.uid||1;
-    vacations=(data.vacations||[]).map(function(v){
-      return {id:v.id,who:v.who,from:new Date(v.from),to:new Date(v.to),workDays:v.workDays,days:v.days};
+        // PRIMO AVVISO: scadenza raggiunta, non ancora notificato
+        if (!r.notified && now >= dueMs) {
+            const catName = getCategoryName(r.category);
+            const timeStr = new Date(r.dateTime).toLocaleString('it-IT', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+            const msg = '⏰ <b>Promemoria scaduto!</b>\n\n📌 ' + r.title + '\n🏷 ' + catName + '\n🕐 ' + timeStr;
+            sendTelegram(msg);
+            r.notified = true;
+            r.notifiedAt = now;
+            changed = true;
+        }
+
+        // ESCALATION: notificato, non fatto, passati X minuti
+        if (r.notified && !r.escalated && now >= (r.notifiedAt + escalMs)) {
+            const msg = '🔴 <b>Ancora da fare!</b>\n\n📌 ' + r.title + '\n⚠️ Non hai ancora segnato come completato.\nRicordati di gestirlo!';
+            sendTelegram(msg);
+            r.escalated = true;
+            changed = true;
+        }
     });
-    swaps=data.swaps||[];
-    swapDates=(data.swapDates||[]).map(function(s){
-      return {id:s.id,date:new Date(s.date)};
-    });
-  }catch(e){}
+
+    if (changed) {
+        saveReminders();
+        renderReminders();
+    }
 }
 
-// ── ESPORTA / IMPORTA ────────────────────────────────────────────────
-function esportaDati(){
-  try{
-    var data={
-      overrides: overrides,
-      vacations: vacations.map(function(v){
-        return {id:v.id,who:v.who,from:v.from.toISOString(),to:v.to.toISOString(),workDays:v.workDays,days:v.days};
-      }),
-      swaps: swaps,
-      swapDates: swapDates.map(function(s){
-        return {id:s.id,date:s.date.toISOString()};
-      }),
-      uid: uid
-    };
-    var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-    var url=URL.createObjectURL(blob);
-    var a=document.createElement('a');
-    a.href=url; a.download='turni_dati.json'; a.click();
-    URL.revokeObjectURL(url);
-  }catch(e){ alert('Errore esportazione: '+e.message); }
+// Avvia il loop ogni 60 secondi
+setInterval(checkDeadlines, 60000);
+// Prima verifica dopo 10 secondi dal caricamento
+setTimeout(checkDeadlines, 10000);
+
+// ── NAV TABS ─────────────────────────────────────────────────────────────────
+function showMain() {
+    document.getElementById('mainView').style.display = 'flex';
+    document.getElementById('settingsView').classList.remove('active');
+    document.getElementById('tabMain').classList.add('active');
+    document.getElementById('tabSettings').classList.remove('active');
+    document.querySelector('.add-btn').style.display = 'flex';
 }
 
-function importaDati(event){
-  var file=event.target.files[0];
-  if(!file) return;
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      var data=JSON.parse(e.target.result);
-      overrides=data.overrides||{};
-      uid=data.uid||1;
-      vacations=(data.vacations||[]).map(function(v){
-        return {id:v.id,who:v.who,from:new Date(v.from),to:new Date(v.to),workDays:v.workDays,days:v.days};
-      });
-      swaps=data.swaps||[];
-      swapDates=(data.swapDates||[]).map(function(s){
-        return {id:s.id,date:new Date(s.date)};
-      });
-      saveData();
-      render();
-      alert('Dati importati!');
-    }catch(err){ alert('Errore importazione: '+err.message); }
-  };
-  reader.readAsText(file);
-  event.target.value='';
+function showSettings() {
+    document.getElementById('mainView').style.display = 'none';
+    document.getElementById('settingsView').classList.add('active');
+    document.getElementById('tabMain').classList.remove('active');
+    document.getElementById('tabSettings').classList.add('active');
+    document.querySelector('.add-btn').style.display = 'none';
+    // Precompila i campi con i valori salvati
+    document.getElementById('tgToken').value  = getTgToken();
+    document.getElementById('tgChatId').value = getTgChatId();
+    document.getElementById('escalationMin').value = getEscalationMin();
+    document.getElementById('ghToken').value  = localStorage.getItem('memo_gh_token') || '';
 }
 
-loadData();
-render();
+// ── FILTRO CATEGORIE ─────────────────────────────────────────────────────────
+function filterCat(cat, btn) {
+    currentFilter = cat;
+    document.querySelectorAll('.cat').forEach(b => b.style.opacity = '0.5');
+    btn.style.opacity = '1';
+    renderReminders();
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function getCategoryName(cat) {
+    const map = { 'lavoro': '💼 Lavoro', 'appuntamenti': '📅 Appuntamenti', 'cose': '✅ Cose da fare', 'pagamenti': '💳 Pagamenti' };
+    return map[cat] || cat;
+}
+
+function getCategoryColor(cat) {
+    const map = { 'lavoro': '#1565c0', 'appuntamenti': '#c62828', 'cose': '#e65100', 'pagamenti': '#2e7d32' };
+    return map[cat] || '#ccc';
+}
+
+function formatDate(dateTime) {
+    const d = new Date(dateTime);
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const time = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    const date = d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+    if (d.toDateString() === now.toDateString()) return '⏰ Oggi alle ' + time;
+    if (d.toDateString() === tomorrow.toDateString()) return '⏰ Domani alle ' + time;
+    return '⏰ ' + date + ' alle ' + time;
+}
+
+// ── MODAL ────────────────────────────────────────────────────────────────────
+function openModal(reminder) {
+    document.getElementById('modalBg').classList.add('open');
+    if (reminder) {
+        document.getElementById('modalTitle').textContent = 'Modifica promemoria';
+        document.getElementById('editId').value = reminder.id;
+        document.getElementById('titleInput').value = reminder.title;
+        document.getElementById('catInput').value = reminder.category;
+        document.getElementById('dateInput').value = reminder.dateTime;
+        document.getElementById('saveBtn').textContent = '💾 Salva modifiche';
+        document.getElementById('deleteBtn').style.display = 'block';
+    } else {
+        document.getElementById('modalTitle').textContent = 'Nuovo promemoria';
+        document.getElementById('editId').value = '';
+        document.getElementById('titleInput').value = '';
+        document.getElementById('catInput').value = 'lavoro';
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 30);
+        const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        document.getElementById('dateInput').value = local;
+        document.getElementById('saveBtn').textContent = '✅ Salva';
+        document.getElementById('deleteBtn').style.display = 'none';
+    }
+    setTimeout(() => document.getElementById('titleInput').focus(), 100);
+}
+
+function closeModal() {
+    document.getElementById('modalBg').classList.remove('open');
+}
+
+function saveReminder() {
+    const editId   = document.getElementById('editId').value;
+    const title    = document.getElementById('titleInput').value.trim();
+    const category = document.getElementById('catInput').value;
+    const dateTime = document.getElementById('dateInput').value;
+
+    if (!title)    { alert('Inserisci un titolo'); return; }
+    if (!dateTime) { alert('Inserisci data e ora'); return; }
+
+    if (editId) {
+        const r = reminders.find(r => r.id == editId);
+        if (r) {
+            // Se cambia la data/ora, resetta le notifiche
+            if (r.dateTime !== dateTime) {
+                r.notified = false;
+                r.notifiedAt = null;
+                r.escalated = false;
+            }
+            r.title    = title;
+            r.category = category;
+            r.dateTime = dateTime;
+        }
+    } else {
+        reminders.unshift({
+            id: Date.now(),
+            title: title,
+            category: category,
+            dateTime: dateTime,
+            done: false,
+            notified: false,
+            notifiedAt: null,
+            escalated: false
+        });
+    }
+
+    saveReminders();
+    renderReminders();
+    closeModal();
+}
+
+function deleteReminderFromModal() {
+    const editId = document.getElementById('editId').value;
+    if (editId && confirm('Eliminare questo promemoria?')) {
+        reminders = reminders.filter(r => r.id != editId);
+        saveReminders();
+        renderReminders();
+        closeModal();
+    }
+}
+
+function toggleDone(id) {
+    const r = reminders.find(r => r.id === id);
+    if (r) {
+        r.done = !r.done;
+        saveReminders();
+        renderReminders();
+    }
+}
+
+function editReminder(id) {
+    const r = reminders.find(r => r.id === id);
+    if (r) openModal(r);
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+function renderReminders() {
+    const list = document.getElementById('reminders-list');
+    let filtered = reminders;
+    if (currentFilter !== 'all') {
+        filtered = reminders.filter(r => r.category === currentFilter);
+    }
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:40px 0;color:#aaa;"><div style="font-size:50px;margin-bottom:12px;">📝</div><div style="font-size:16px;">Nessun promemoria</div><div style="font-size:13px;margin-top:4px;">Tocca + per crearne uno</div></div>';
+        return;
+    }
+
+    const now = Date.now();
+    const active = filtered.filter(r => !r.done).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+    const done   = filtered.filter(r => r.done);
+    let html = '';
+
+    if (active.length > 0) {
+        html += '<p class="section-title">📋 Da fare</p>';
+        active.forEach(r => {
+            const color = getCategoryColor(r.category);
+            const isOverdue = new Date(r.dateTime).getTime() < now;
+            const notifyBadge = r.escalated
+                ? '<span class="card-notify">🔴 Escalation inviata</span>'
+                : r.notified
+                    ? '<span class="card-notify">📨 Notifica inviata</span>'
+                    : isOverdue ? '<span class="card-notify">⚠️ Scaduto</span>' : '';
+            html += '<div class="card" style="border-left-color:' + color + (isOverdue ? ';background:#fff8f0;' : ';') + '">'
+                + '<div class="card-left" onclick="editReminder(' + r.id + ')">'
+                + '<span class="card-title">' + escHtml(r.title) + '</span>'
+                + '<span class="card-time">' + formatDate(r.dateTime) + '</span>'
+                + '<span class="card-cat" style="color:' + color + ';">' + getCategoryName(r.category) + '</span>'
+                + notifyBadge
+                + '</div>'
+                + '<div class="card-actions">'
+                + '<div class="check" onclick="event.stopPropagation();toggleDone(' + r.id + ')"></div>'
+                + '<span style="font-size:11px;color:#aaa;cursor:pointer;" onclick="event.stopPropagation();editReminder(' + r.id + ')">✏️</span>'
+                + '</div></div>';
+        });
+    }
+
+    if (done.length > 0) {
+        html += '<p class="section-subtitle">✅ Completati</p>';
+        done.forEach(r => {
+            const color = getCategoryColor(r.category);
+            html += '<div class="card" style="border-left-color:' + color + ';opacity:0.6;">'
+                + '<div class="card-left" onclick="editReminder(' + r.id + ')">'
+                + '<span class="card-title" style="text-decoration:line-through;">' + escHtml(r.title) + '</span>'
+                + '<span class="card-time">' + formatDate(r.dateTime) + '</span>'
+                + '</div>'
+                + '<div class="check done" onclick="toggleDone(' + r.id + ')"></div>'
+                + '</div>';
+        });
+    }
+
+    list.innerHTML = html;
+}
+
+function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+updateTgIcon();
+renderReminders();
 </script>
-
 </body>
 </html>
