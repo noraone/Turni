@@ -75,12 +75,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 .btn{padding:.6rem 1.3rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.78rem;cursor:pointer;letter-spacing:.06em;border:1px solid;}
 .btn-primary{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600;}
 .btn-ghost{background:transparent;border-color:var(--border);color:var(--muted);}
-.btn-danger{background:transparent;border-color:#ff3b30;color:#ff3b30;}
 .item-list{display:flex;flex-direction:column;gap:.5rem;margin-top:.6rem;}
 .list-item{display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;}
 .list-item.swap-item{border-color:rgba(167,139,250,.3);}
 .list-item.note-item{border-color:rgba(245,200,66,.25);align-items:flex-start;}
 .list-item.backup-item{border-color:rgba(255,170,0,.2);align-items:flex-start;}
+.list-item.backup-prev{border-color:rgba(124,200,164,.3);}
 .item-main{font-size:.8rem;color:var(--text);font-weight:500;}
 .item-sub{font-size:.66rem;color:var(--muted);margin-top:.12rem;}
 .item-right{display:flex;align-items:center;gap:.8rem;}
@@ -125,7 +125,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 .note-text{font-size:.78rem;color:var(--text);margin-top:.3rem;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
 .note-date-label{font-size:.62rem;color:var(--note);font-weight:700;}
 .backup-date{font-size:.72rem;color:var(--accent);font-weight:600;}
+.backup-prev .backup-date{color:var(--today);}
 .backup-info{font-size:.63rem;color:var(--muted);margin-top:.2rem;}
+.backup-section-label{font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin:.8rem 0 .4rem;padding-left:.2rem;}
 </style>
 </head>
 <body>
@@ -216,8 +218,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 
 <div class="panel" id="panel3">
   <div class="card">
-    <h3 style="color:var(--accent)">💾 Ultimi backup</h3>
-    <p style="font-size:.7rem;color:var(--muted);margin-bottom:1rem;">Ogni salvataggio crea automaticamente un backup. Puoi ripristinare uno dei 4 più recenti.</p>
+    <h3 style="color:var(--accent)">💾 Backup</h3>
+    <p style="font-size:.7rem;color:var(--muted);margin-bottom:1rem;">Ultimi 9 backup di oggi + l'ultimo backup del giorno precedente.</p>
     <div id="backupList"><div class="empty-state">Nessun backup disponibile</div></div>
   </div>
 </div>
@@ -244,44 +246,28 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 </div>
 
 <script>
-// ── FIREBASE CONFIG ───────────────────────────────────────────────────
 var FB_URL = 'https://turni-lavoro-52db4-default-rtdb.europe-west1.firebasedatabase.app';
 
-function fbGet(path){
-  return fetch(FB_URL+path+'.json').then(function(r){return r.json();});
-}
-function fbSet(path, data){
-  return fetch(FB_URL+path+'.json',{method:'PUT',body:JSON.stringify(data)}).then(function(r){return r.json();});
-}
-function fbPatch(path, data){
-  return fetch(FB_URL+path+'.json',{method:'PATCH',body:JSON.stringify(data)}).then(function(r){return r.json();});
-}
+function fbGet(path){ return fetch(FB_URL+path+'.json').then(function(r){return r.json();}); }
+function fbSet(path,data){ return fetch(FB_URL+path+'.json',{method:'PUT',body:JSON.stringify(data)}).then(function(r){return r.json();}); }
 
-// ── COSTANTI ──────────────────────────────────────────────────────────
-var CYCLE = [true,true,false,true,false,true,true,false,false,true,false,true,false,false];
-var M  = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-var DF = ['Domenica','Lunedi','Martedi','Mercoledi','Giovedi','Venerdi','Sabato'];
+var CYCLE=[true,true,false,true,false,true,true,false,false,true,false,true,false,false];
+var M=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+var DF=['Domenica','Lunedi','Martedi','Mercoledi','Giovedi','Venerdi','Sabato'];
 
-// Data corrente reale
-var NOW = new Date();
-var TODAY = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate());
-var currentYear = NOW.getFullYear();
-var currentMonth = NOW.getMonth();
+var NOW=new Date();
+var TODAY=new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate());
+var currentYear=NOW.getFullYear();
+var currentMonth=NOW.getMonth();
 
-// ── STATO ────────────────────────────────────────────────────────────
-var overrides  = {};
-var vacations  = [];
-var swaps      = [];
-var swapDates  = [];
-var notes      = {};
-var uid        = 1;
-var selMode = false, selStep = 0, selStart = null, selEnd = null;
-var mDateKey = null, mOpt = null;
-var firebaseOk = false;
+var overrides={},vacations=[],swaps=[],swapDates=[],notes={},uid=1;
+var selMode=false,selStep=0,selStart=null,selEnd=null;
+var mDateKey=null,mOpt=null;
+var firebaseOk=false;
 
-// ── UTILS ─────────────────────────────────────────────────────────────
-function dk(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-function kd(k){ var p=k.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
+function dk(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function kd(k){var p=k.split('-').map(Number);return new Date(p[0],p[1]-1,p[2]);}
+function todayStr(){return dk(TODAY);}
 
 function isWorkDay(d){
   var dU=Date.UTC(d.getFullYear(),d.getMonth(),d.getDate());
@@ -293,104 +279,97 @@ function isWorkDay(d){
     var sU=Date.UTC(swapDates[i].date.getFullYear(),swapDates[i].date.getMonth(),swapDates[i].date.getDate());
     if(sU<=dU) inv++;
   }
-  return inv%2===0 ? base : !base;
+  return inv%2===0?base:!base;
 }
 
-function isVac(st){ return st==='vac-me'||st==='vac-sil'; }
-
-function getStatus(d){
-  var k=dk(d);
-  if(overrides[k]) return overrides[k];
-  return isWorkDay(d)?'work':'off';
-}
-
-function isSwapDay(k){ return swaps.some(function(s){ return s.d1===k; }); }
+function isVac(st){return st==='vac-me'||st==='vac-sil';}
+function getStatus(d){var k=dk(d);if(overrides[k])return overrides[k];return isWorkDay(d)?'work':'off';}
+function isSwapDay(k){return swaps.some(function(s){return s.d1===k;});}
 
 function countYearlyVacations(){
-  var vmYear=0, vsYear=0;
-  var yearStr=String(currentYear)+'-';
+  var vmYear=0,vsYear=0,yearStr=String(currentYear)+'-';
   Object.keys(overrides).forEach(function(k){
     if(k.indexOf(yearStr)===0){
       if(overrides[k]==='vac-me') vmYear++;
       else if(overrides[k]==='vac-sil') vsYear++;
     }
   });
-  return {vmYear:vmYear, vsYear:vsYear};
+  return {vmYear:vmYear,vsYear:vsYear};
 }
 
-function setSyncStatus(msg, cls){
+function setSyncStatus(msg,cls){
   var el=document.getElementById('syncStatus');
   el.textContent=msg;
   el.className='sync-status'+(cls?' '+cls:'');
 }
 
-// ── FIREBASE SYNC ─────────────────────────────────────────────────────
 function buildPayload(){
   return {
-    overrides: overrides,
-    vacations: vacations.map(function(v){
-      return {id:v.id,who:v.who,from:v.from.toISOString(),to:v.to.toISOString(),workDays:v.workDays,days:v.days};
-    }),
-    swaps: swaps,
-    swapDates: swapDates.map(function(s){
-      return {id:s.id,date:s.date.toISOString()};
-    }),
-    notes: notes,
-    uid: uid
+    overrides:overrides,
+    vacations:vacations.map(function(v){return {id:v.id,who:v.who,from:v.from.toISOString(),to:v.to.toISOString(),workDays:v.workDays,days:v.days};}),
+    swaps:swaps,
+    swapDates:swapDates.map(function(s){return {id:s.id,date:s.date.toISOString()};}),
+    notes:notes,
+    uid:uid
   };
 }
 
 function applyPayload(data){
-  overrides = data.overrides||{};
-  uid = data.uid||1;
-  vacations = (data.vacations||[]).map(function(v){
-    return {id:v.id,who:v.who,from:new Date(v.from),to:new Date(v.to),workDays:v.workDays,days:v.days};
-  });
-  swaps = data.swaps||[];
-  swapDates = (data.swapDates||[]).map(function(s){
-    return {id:s.id,date:new Date(s.date)};
-  });
-  notes = data.notes||{};
+  overrides=data.overrides||{};
+  uid=data.uid||1;
+  vacations=(data.vacations||[]).map(function(v){return {id:v.id,who:v.who,from:new Date(v.from),to:new Date(v.to),workDays:v.workDays,days:v.days};});
+  swaps=data.swaps||[];
+  swapDates=(data.swapDates||[]).map(function(s){return {id:s.id,date:new Date(s.date)};});
+  notes=data.notes||{};
 }
 
+// ── BACKUP SMART ──────────────────────────────────────────────────────
+// Logica: mantieni ultimi 9 di oggi + 1 ultimo di giorno precedente
 function saveToFirebase(){
   if(!firebaseOk) return;
-  var payload = buildPayload();
+  var payload=buildPayload();
+  var now=Date.now();
+  var todayS=todayStr(); // "2026-05-10"
 
-  // Prima leggo i backup esistenti
   fbGet('/backups').then(function(existing){
-    var list = existing ? Object.values(existing) : [];
-    // Ordino per timestamp
-    list.sort(function(a,b){ return b.ts - a.ts; });
-    // Tengo solo gli ultimi 3 (per fare spazio al nuovo)
-    list = list.slice(0,3);
+    var map=existing||{};
+    var list=Object.entries(map).map(function(e){return {key:e[0],ts:e[1].ts,label:e[1].label,dayStr:e[1].dayStr,data:e[1].data};});
+
+    // Separo backup di oggi da quelli di giorni precedenti
+    var todayBacks=list.filter(function(b){return b.dayStr===todayS;});
+    var prevBacks=list.filter(function(b){return b.dayStr!==todayS;});
+
+    // Ordino per timestamp decrescente
+    todayBacks.sort(function(a,b){return b.ts-a.ts;});
+    prevBacks.sort(function(a,b){return b.ts-a.ts;});
+
+    // Tengo ultimi 8 di oggi (il nuovo sarà il 9°)
+    todayBacks=todayBacks.slice(0,8);
+
+    // Tengo solo 1 backup del giorno precedente più recente
+    // Prendo il più recente tra i giorni precedenti
+    var lastPrev=prevBacks.length>0?[prevBacks[0]]:[];
 
     // Creo nuovo backup
-    var newBackup = {
-      ts: Date.now(),
-      label: new Date().toLocaleString('it-IT'),
-      data: payload
-    };
+    var newKey='b'+now;
+    var newBackup={ts:now,label:new Date().toLocaleString('it-IT'),dayStr:todayS,data:payload};
 
-    // Ricostruisco oggetto backup con max 4
-    var newBackups = {};
-    newBackups['b'+Date.now()] = newBackup;
-    list.forEach(function(b,i){ newBackups['b'+(b.ts)] = b; });
+    // Ricostruisco la mappa
+    var newMap={};
+    newMap[newKey]=newBackup;
+    todayBacks.forEach(function(b){newMap[b.key]=b;});
+    lastPrev.forEach(function(b){newMap[b.key]=b;});
 
-    // Salvo dati principali + backups
-    fbSet('/dati', payload).then(function(){
-      fbSet('/backups', newBackups).then(function(){
-        setSyncStatus('✓ Sincronizzato · '+new Date().toLocaleTimeString('it-IT'), 'ok');
-        localStorage.setItem('turni_v1', JSON.stringify(payload));
+    fbSet('/backups',newMap).then(function(){
+      fbSet('/dati',payload).then(function(){
+        setSyncStatus('✓ Sincronizzato · '+new Date().toLocaleTimeString('it-IT'),'ok');
+        localStorage.setItem('turni_v1',JSON.stringify(payload));
       });
-    }).catch(function(){
-      setSyncStatus('⚠️ Errore salvataggio Firebase', 'err');
     });
   }).catch(function(){
-    // Se i backup non esistono, salvo solo i dati
-    fbSet('/dati', payload).then(function(){
-      setSyncStatus('✓ Sincronizzato · '+new Date().toLocaleTimeString('it-IT'), 'ok');
-      localStorage.setItem('turni_v1', JSON.stringify(payload));
+    fbSet('/dati',payload).then(function(){
+      setSyncStatus('✓ Sincronizzato · '+new Date().toLocaleTimeString('it-IT'),'ok');
+      localStorage.setItem('turni_v1',JSON.stringify(payload));
     });
   });
 }
@@ -400,11 +379,10 @@ function loadFromFirebase(){
   fbGet('/dati').then(function(data){
     if(data){
       applyPayload(data);
-      localStorage.setItem('turni_v1', JSON.stringify(data));
+      localStorage.setItem('turni_v1',JSON.stringify(data));
       firebaseOk=true;
       setSyncStatus('✓ Dati caricati · '+new Date().toLocaleTimeString('it-IT'),'ok');
     } else {
-      // Firebase vuoto, carico da localStorage e carico su Firebase
       loadFromLocalStorage();
       firebaseOk=true;
       setSyncStatus('✓ Connesso (dati locali)','ok');
@@ -419,37 +397,53 @@ function loadFromFirebase(){
 }
 
 function loadFromLocalStorage(){
-  try{
-    var raw=localStorage.getItem('turni_v1');
-    if(!raw) return;
-    applyPayload(JSON.parse(raw));
-  }catch(e){}
+  try{var raw=localStorage.getItem('turni_v1');if(!raw)return;applyPayload(JSON.parse(raw));}catch(e){}
 }
 
-// ── BACKUP ────────────────────────────────────────────────────────────
 function renderBackupList(){
   var el=document.getElementById('backupList');
   fbGet('/backups').then(function(data){
     if(!data){el.innerHTML='<div class="empty-state">Nessun backup disponibile</div>';return;}
-    var list=Object.values(data);
+    var list=Object.entries(data).map(function(e){return {key:e[0],ts:e[1].ts,label:e[1].label,dayStr:e[1].dayStr,data:e[1].data};});
     list.sort(function(a,b){return b.ts-a.ts;});
-    list=list.slice(0,4);
     if(!list.length){el.innerHTML='<div class="empty-state">Nessun backup disponibile</div>';return;}
-    el.innerHTML='<div class="item-list">'+list.map(function(b,i){
-      var vacCount=Object.values(b.data.overrides||{}).filter(function(v){return v==='vac-me'||v==='vac-sil';}).length;
-      var noteCount=Object.keys(b.data.notes||{}).length;
-      return '<div class="list-item backup-item"><div style="flex:1"><div class="backup-date">'+(i===0?'⭐ Più recente: ':'')+b.label+'</div><div class="backup-info">'+vacCount+' giorni ferie · '+noteCount+' note</div></div><button class="restore-btn" onclick="restoreBackup('+b.ts+')">Ripristina</button></div>';
-    }).join('')+'</div>';
+
+    var todayS=todayStr();
+    var todayList=list.filter(function(b){return b.dayStr===todayS;});
+    var prevList=list.filter(function(b){return b.dayStr!==todayS;});
+
+    var html='';
+
+    if(todayList.length){
+      html+='<div class="backup-section-label">📅 Oggi</div><div class="item-list">';
+      todayList.forEach(function(b,i){
+        var vacCount=Object.values(b.data.overrides||{}).filter(function(v){return v==='vac-me'||v==='vac-sil';}).length;
+        var noteCount=Object.keys(b.data.notes||{}).length;
+        html+='<div class="list-item backup-item"><div style="flex:1"><div class="backup-date">'+(i===0?'⭐ ':'')+b.label+'</div><div class="backup-info">'+vacCount+' giorni ferie · '+noteCount+' note</div></div><button class="restore-btn" onclick="restoreBackup(\''+b.key+'\')">Ripristina</button></div>';
+      });
+      html+='</div>';
+    }
+
+    if(prevList.length){
+      html+='<div class="backup-section-label">📆 Giorno precedente</div><div class="item-list">';
+      prevList.forEach(function(b){
+        var vacCount=Object.values(b.data.overrides||{}).filter(function(v){return v==='vac-me'||v==='vac-sil';}).length;
+        var noteCount=Object.keys(b.data.notes||{}).length;
+        html+='<div class="list-item backup-item backup-prev"><div style="flex:1"><div class="backup-date">'+b.label+'</div><div class="backup-info">'+vacCount+' giorni ferie · '+noteCount+' note</div></div><button class="restore-btn" onclick="restoreBackup(\''+b.key+'\')">Ripristina</button></div>';
+      });
+      html+='</div>';
+    }
+
+    el.innerHTML=html;
   }).catch(function(){
     el.innerHTML='<div class="empty-state">Errore caricamento backup</div>';
   });
 }
 
-function restoreBackup(ts){
+function restoreBackup(key){
   if(!confirm('Ripristinare questo backup? I dati attuali verranno sovrascritti.')) return;
   fbGet('/backups').then(function(data){
-    var list=Object.values(data);
-    var b=list.find(function(x){return x.ts===ts;});
+    var b=data[key];
     if(!b){alert('Backup non trovato');return;}
     applyPayload(b.data);
     render();
@@ -459,15 +453,14 @@ function restoreBackup(ts){
   });
 }
 
-// ── UI ────────────────────────────────────────────────────────────────
 function showTab(n){
   for(var i=0;i<4;i++){
     document.getElementById('tab'+i).classList.toggle('active',i===n);
     document.getElementById('panel'+i).classList.toggle('active',i===n);
   }
-  if(n===1){ renderVacList(); renderSwapList(); }
-  if(n===2){ renderNoteList(); }
-  if(n===3){ renderBackupList(); }
+  if(n===1){renderVacList();renderSwapList();}
+  if(n===2){renderNoteList();}
+  if(n===3){renderBackupList();}
 }
 
 function changeMonth(dir){
@@ -484,12 +477,8 @@ function render(){
   grid.innerHTML='';
   var first=new Date(currentYear,currentMonth,1);
   var last=new Date(currentYear,currentMonth+1,0);
-  var pad=first.getDay()-1; if(pad<0) pad=6;
-  for(var i=0;i<pad;i++){
-    var e=document.createElement('div');
-    e.className='day empty';
-    grid.appendChild(e);
-  }
+  var pad=first.getDay()-1;if(pad<0)pad=6;
+  for(var i=0;i<pad;i++){var e=document.createElement('div');e.className='day empty';grid.appendChild(e);}
   var wc=0,oc=0,sc=0;
   for(var d=1;d<=last.getDate();d++){
     var date=new Date(currentYear,currentMonth,d);
@@ -516,7 +505,7 @@ function render(){
     div.className=cls;
     div.setAttribute('data-key',k);
     div.innerHTML=noteDot+'<span class="day-num">'+d+'</span><span class="day-icon">'+icon+'</span><span class="day-name">'+name+'</span>';
-    div.onclick=function(){ handleDayClick(this.getAttribute('data-key')); };
+    div.onclick=function(){handleDayClick(this.getAttribute('data-key'));};
     grid.appendChild(div);
   }
   if(selMode) highlightRange();
@@ -530,14 +519,11 @@ function render(){
     '<div class="stat" style="opacity:0"></div>';
 }
 
-function handleDayClick(k){
-  if(selMode){ handleSelClick(k); return; }
-  openModal(k);
-}
+function handleDayClick(k){if(selMode){handleSelClick(k);return;}openModal(k);}
 
 function openModal(k){
   mDateKey=k;
-  var d=kd(k), st=getStatus(d);
+  var d=kd(k),st=getStatus(d);
   if(isSwapDay(k)) mOpt='swap';
   else if(isVac(st)) mOpt='vacation';
   else mOpt=st;
@@ -549,14 +535,9 @@ function openModal(k){
   document.getElementById('modalOverlay').classList.add('active');
 }
 
-function closeModal(){
-  document.getElementById('modalOverlay').classList.remove('active');
-  mDateKey=null; mOpt=null;
-}
-
-function bgCloseModal(e){ if(e.target.id==='modalOverlay') closeModal(); }
-
-function selectOpt(o){ mOpt=o; updModal(); }
+function closeModal(){document.getElementById('modalOverlay').classList.remove('active');mDateKey=null;mOpt=null;}
+function bgCloseModal(e){if(e.target.id==='modalOverlay')closeModal();}
+function selectOpt(o){mOpt=o;updModal();}
 
 function updModal(){
   document.getElementById('optWork').className='opt-btn'+(mOpt==='work'?' sel-work':'');
@@ -569,13 +550,11 @@ function saveModal(){
   if(!mDateKey) return;
   var k=mDateKey;
   var noteVal=document.getElementById('noteInput').value.trim();
-  if(noteVal) notes[k]=noteVal;
-  else delete notes[k];
-
-  var existingSwap=swaps.find(function(s){ return s.d1===k; });
-  if(existingSwap && mOpt!=='swap'){
-    swapDates=swapDates.filter(function(s){ return s.id!==existingSwap.id; });
-    swaps=swaps.filter(function(s){ return s.id!==existingSwap.id; });
+  if(noteVal) notes[k]=noteVal; else delete notes[k];
+  var existingSwap=swaps.find(function(s){return s.d1===k;});
+  if(existingSwap&&mOpt!=='swap'){
+    swapDates=swapDates.filter(function(s){return s.id!==existingSwap.id;});
+    swaps=swaps.filter(function(s){return s.id!==existingSwap.id;});
   }
   if(mOpt==='swap'){
     if(!existingSwap){
@@ -592,22 +571,22 @@ function saveModal(){
     overrides[k]=mOpt;
   }
   document.getElementById('modalOverlay').classList.remove('active');
-  mDateKey=null; mOpt=null;
-  render(); saveToFirebase();
+  mDateKey=null;mOpt=null;
+  render();saveToFirebase();
 }
 
 function resetModal(){
   if(!mDateKey) return;
   var k=mDateKey;
   delete overrides[k];
-  var existingSwap=swaps.find(function(s){ return s.d1===k; });
+  var existingSwap=swaps.find(function(s){return s.d1===k;});
   if(existingSwap){
-    swapDates=swapDates.filter(function(s){ return s.id!==existingSwap.id; });
-    swaps=swaps.filter(function(s){ return s.id!==existingSwap.id; });
+    swapDates=swapDates.filter(function(s){return s.id!==existingSwap.id;});
+    swaps=swaps.filter(function(s){return s.id!==existingSwap.id;});
   }
   document.getElementById('modalOverlay').classList.remove('active');
-  mDateKey=null; mOpt=null;
-  render(); saveToFirebase();
+  mDateKey=null;mOpt=null;
+  render();saveToFirebase();
 }
 
 function toggleSelMode(){
@@ -631,11 +610,8 @@ function clearSelection(){
 
 function handleSelClick(k){
   var date=kd(k);
-  if(selStep===1){
-    selStart=date;selStep=2;
-    document.getElementById('selBarLabel').textContent='Ora tocca l ultimo giorno';
-    highlightRange();
-  } else if(selStep===2){
+  if(selStep===1){selStart=date;selStep=2;document.getElementById('selBarLabel').textContent='Ora tocca l ultimo giorno';highlightRange();}
+  else if(selStep===2){
     selEnd=date;
     if(selEnd<selStart){var t=selStart;selStart=selEnd;selEnd=t;}
     selStep=3;
@@ -674,9 +650,9 @@ function salvaFerieSelezionate(chi){
   showTab(1);
 }
 
-function analizzaFerie(who, days){
+function analizzaFerie(who,days){
   var inverted=(who==='silvano');
-  var chiLav=0, altroLav=0;
+  var chiLav=0,altroLav=0;
   days.forEach(function(k){
     var p=k.split('-').map(Number);
     var d=new Date(p[0],p[1]-1,p[2]);
@@ -687,18 +663,15 @@ function analizzaFerie(who, days){
     if(inverted?!base:base) chiLav++;
     if(inverted?base:!base) altroLav++;
   });
-  return {chiLav:chiLav, altroLav:altroLav, vantaggio:altroLav>chiLav};
+  return {chiLav:chiLav,altroLav:altroLav,vantaggio:altroLav>chiLav};
 }
 
 function aggiornaVantaggio(){
-  var totMe=0, totSil=0;
+  var totMe=0,totSil=0;
   vacations.forEach(function(v){
     var who=v.who==='Io'?'me':'silvano';
     var r=analizzaFerie(who,v.days);
-    if(r.vantaggio){
-      if(who==='me') totMe++;
-      else totSil++;
-    }
+    if(r.vantaggio){if(who==='me')totMe++;else totSil++;}
   });
   document.getElementById('vantMe').textContent=totMe;
   document.getElementById('vantSil').textContent=totSil;
@@ -749,45 +722,35 @@ function renderNoteList(){
   }).join('')+'</div>';
 }
 
-function deleteNote(k){
-  delete notes[k];
-  renderNoteList();render();saveToFirebase();
-}
+function deleteNote(k){delete notes[k];renderNoteList();render();saveToFirebase();}
 
-// ── ESPORTA / IMPORTA ────────────────────────────────────────────────
 function esportaDati(){
   try{
-    var data=buildPayload();
-    var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    var blob=new Blob([JSON.stringify(buildPayload(),null,2)],{type:'application/json'});
     var url=URL.createObjectURL(blob);
     var a=document.createElement('a');
-    a.href=url; a.download='turni_dati.json'; a.click();
+    a.href=url;a.download='turni_dati.json';a.click();
     URL.revokeObjectURL(url);
-  }catch(e){ alert('Errore esportazione: '+e.message); }
+  }catch(e){alert('Errore: '+e.message);}
 }
 
 function importaDati(event){
-  var file=event.target.files[0];
-  if(!file) return;
+  var file=event.target.files[0];if(!file)return;
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var data=JSON.parse(e.target.result);
-      applyPayload(data);
-      render();
-      saveToFirebase();
+      applyPayload(JSON.parse(e.target.result));
+      render();saveToFirebase();
       alert('Dati importati e sincronizzati!');
-    }catch(err){ alert('Errore importazione: '+err.message); }
+    }catch(err){alert('Errore: '+err.message);}
   };
   reader.readAsText(file);
   event.target.value='';
 }
 
-// ── AVVIO ─────────────────────────────────────────────────────────────
 loadFromLocalStorage();
 render();
 loadFromFirebase();
 </script>
-
 </body>
 </html>
