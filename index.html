@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -7,7 +6,7 @@
 <title>Turni Lavoro</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,wght@0,300;0,600;0,800;1,300&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0f0e0c;--surface:#1a1814;--surface2:#242018;--border:#2e2a22;--accent:#ffaa00;--text:#f0ead8;--muted:#7a7060;--today:#7cc8a4;--vacation:#e87d6d;--swap:#a78bfa;--vac-me:#4a9eff;--vac-sil:#a78bfa;}
+:root{--bg:#0f0e0c;--surface:#1a1814;--surface2:#242018;--border:#2e2a22;--accent:#ffaa00;--text:#f0ead8;--muted:#7a7060;--today:#7cc8a4;--vacation:#e87d6d;--swap:#a78bfa;--vac-me:#4a9eff;--vac-sil:#a78bfa;--note:#f5c842;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;padding:1.5rem 1rem 4rem;}
 .header{max-width:960px;margin:0 auto 1.5rem;display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--border);padding-bottom:1.2rem;flex-wrap:wrap;gap:.8rem;}
@@ -39,7 +38,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 .weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;}
 .weekday{text-align:center;font-size:.62rem;color:var(--muted);padding:.4rem 0;letter-spacing:.1em;text-transform:uppercase;}
 .days-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
-.day{border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:5px 2px 4px;cursor:pointer;border:1px solid transparent;height:54px;}
+.day{border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:5px 2px 4px;cursor:pointer;border:1px solid transparent;height:54px;position:relative;}
 .day.empty{cursor:default;background:transparent!important;border:none!important;pointer-events:none;}
 .day.work{background:rgba(255,170,0,.18);border-color:rgba(255,170,0,.45);}
 .day.off{background:#222018;border-color:#3a3530;}
@@ -62,6 +61,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 .day-name{font-size:.45rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;width:100%;text-align:center;}
 .day.vac-me .day-name{color:var(--vac-me);}
 .day.vac-sil .day-name{color:var(--vac-sil);}
+.note-dot{position:absolute;top:3px;right:4px;width:12px;height:12px;border-radius:50%;background:#ff3b30;}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:1.2rem;}
 @media(max-width:500px){.stats{grid-template-columns:repeat(2,1fr);}}
 .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem;text-align:center;}
@@ -78,11 +78,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 .item-list{display:flex;flex-direction:column;gap:.5rem;margin-top:.6rem;}
 .list-item{display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;}
 .list-item.swap-item{border-color:rgba(167,139,250,.3);}
+.list-item.note-item{border-color:rgba(245,200,66,.25);align-items:flex-start;}
 .item-main{font-size:.8rem;color:var(--text);font-weight:500;}
 .item-sub{font-size:.66rem;color:var(--muted);margin-top:.12rem;}
 .item-right{display:flex;align-items:center;gap:.8rem;}
 .item-count{font-family:'Fraunces',serif;font-size:1.1rem;font-weight:700;color:var(--vacation);}
-.del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:.2rem;}
+.del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:.2rem;flex-shrink:0;}
 .empty-state{text-align:center;color:var(--muted);font-size:.76rem;padding:1.2rem 0;}
 .vantaggio-bar{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:1.2rem;}
 .vant-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center;}
@@ -106,12 +107,17 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 .opt-btn.sel-off{border-color:var(--muted);background:rgba(122,112,96,.12);}
 .opt-btn.sel-vac{border-color:var(--vac-me);background:rgba(74,158,255,.12);color:var(--vac-me);}
 .opt-btn.sel-swap{border-color:var(--swap);background:rgba(167,139,250,.12);color:var(--swap);}
+.note-area{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Mono',monospace;font-size:.8rem;padding:.75rem 1rem;resize:vertical;min-height:80px;margin-bottom:1.3rem;}
+.note-area:focus{outline:none;border-color:var(--note);}
+.note-area::placeholder{color:var(--muted);}
 .modal-actions{display:flex;gap:.7rem;justify-content:flex-end;}
 .reset-link{display:block;text-align:center;background:none;border:none;color:var(--muted);font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;margin-top:.7rem;text-decoration:underline;}
 .data-bar{max-width:960px;margin:0 auto 1.2rem;display:flex;gap:.5rem;justify-content:flex-end;}
 .data-btn{background:var(--surface);border:1px solid var(--border);color:#fff;font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;padding:.45rem .85rem;border-radius:8px;cursor:pointer;}
 .data-btn:hover{border-color:var(--accent);color:var(--accent);}
 .import-input{display:none;}
+.note-text{font-size:.78rem;color:var(--text);margin-top:.3rem;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+.note-date-label{font-size:.62rem;color:var(--note);font-weight:700;}
 </style>
 </head>
 <body>
@@ -131,6 +137,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 <div class="tabs">
   <button class="tab active" id="tab0" onclick="showTab(0)">📅 Calendario</button>
   <button class="tab" id="tab1" onclick="showTab(1)">🌴 Ferie</button>
+  <button class="tab" id="tab2" onclick="showTab(2)">📝 Note</button>
 </div>
 
 <div class="data-bar">
@@ -147,6 +154,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
     <div class="legend-item"><div class="legend-dot" style="background:var(--vac-me)"></div>Ferie mie</div>
     <div class="legend-item"><div class="legend-dot" style="background:var(--vac-sil)"></div>Ferie Silvano</div>
     <div class="legend-item"><div class="legend-dot" style="background:var(--swap);border-radius:50%"></div>Cambio turno</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--note);border-radius:50%"></div>Nota</div>
   </div>
   <button class="segna-btn" id="segnaBtnMain" onclick="toggleSelMode()">🌴 Segna ferie</button>
   <div class="sel-bar" id="selBar">
@@ -188,6 +196,13 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
   </div>
 </div>
 
+<div class="panel" id="panel2">
+  <div class="card">
+    <h3 style="color:var(--note)">📝 Tutte le note</h3>
+    <div id="noteList"><div class="empty-state">Nessuna nota registrata</div></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalOverlay" onclick="bgCloseModal(event)">
   <div class="modal">
     <div class="modal-title" id="modalTitle"></div>
@@ -199,6 +214,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
       <button class="opt-btn" id="optVac" onclick="selectOpt('vacation')">🌴 In ferie</button>
       <button class="opt-btn" id="optSwap" onclick="selectOpt('swap')">🔄 Cambio turno</button>
     </div>
+    <div class="modal-sec-label">📝 Nota</div>
+    <textarea class="note-area" id="noteInput" placeholder="Scrivi una nota per questo giorno..."></textarea>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Annulla</button>
       <button class="btn btn-primary" onclick="saveModal()">Salva</button>
@@ -210,7 +227,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 <script>
 var ANCHOR = new Date(2026, 2, 8);
 var CYCLE  = [true,true,false,true,false,true,true,false,false,true,false,true,false,false];
-var TODAY  = new Date(2026, 2, 7);
+var TODAY  = new Date(2026, 2, 15);
 var M  = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 var DF = ['Domenica','Lunedi','Martedi','Mercoledi','Giovedi','Venerdi','Sabato'];
 var currentYear = 2026, currentMonth = 2;
@@ -219,6 +236,7 @@ var overrides  = {};
 var vacations  = [];
 var swaps      = [];
 var swapDates  = [];
+var notes      = {};
 var uid        = 1;
 var selMode = false, selStep = 0, selStart = null, selEnd = null;
 var mDateKey = null, mOpt = null;
@@ -249,7 +267,6 @@ function getStatus(d){
 
 function isSwapDay(k){ return swaps.some(function(s){ return s.d1===k; }); }
 
-// Conta ferie totali nell'anno currentYear scorrendo gli overrides
 function countYearlyVacations(){
   var vmYear=0, vsYear=0;
   var yearStr=String(currentYear)+'-';
@@ -263,11 +280,12 @@ function countYearlyVacations(){
 }
 
 function showTab(n){
-  for(var i=0;i<2;i++){
+  for(var i=0;i<3;i++){
     document.getElementById('tab'+i).classList.toggle('active',i===n);
     document.getElementById('panel'+i).classList.toggle('active',i===n);
   }
   if(n===1){ renderVacList(); renderSwapList(); }
+  if(n===2){ renderNoteList(); }
 }
 
 function changeMonth(dir){
@@ -297,8 +315,9 @@ function render(){
     var st=getStatus(date);
     var isTd=date.toDateString()===TODAY.toDateString();
     var isSw=isSwapDay(k);
+    var hasNote=!!(notes[k]&&notes[k].trim());
     if(st==='work') wc++;
-    else if(st==='vac-me'||st==='vac-sil') { /* counted yearly */ }
+    else if(st==='vac-me'||st==='vac-sil'){}
     else oc++;
     if(isSw) sc++;
     var cls='day';
@@ -310,18 +329,16 @@ function render(){
     if(isTd) cls+=' today';
     var icon=isVac(st)?'&#127796;':isSw?'&#8644;':st==='work'?'L':'';
     var name=st==='vac-me'?'Io':st==='vac-sil'?'Silvano':'';
+    var noteDot=hasNote?'<span class="note-dot"></span>':'';
     var div=document.createElement('div');
     div.className=cls;
     div.setAttribute('data-key',k);
-    div.innerHTML='<span class="day-num">'+d+'</span><span class="day-icon">'+icon+'</span><span class="day-name">'+name+'</span>';
+    div.innerHTML=noteDot+'<span class="day-num">'+d+'</span><span class="day-icon">'+icon+'</span><span class="day-name">'+name+'</span>';
     div.onclick=function(){ handleDayClick(this.getAttribute('data-key')); };
     grid.appendChild(div);
   }
   if(selMode) highlightRange();
-
-  // Totali annuali ferie
   var yearly=countYearlyVacations();
-
   document.getElementById('stats').innerHTML=
     '<div class="stat"><div class="stat-num">'+wc+'</div><div class="stat-label">Turni lavoro</div><div class="stat-sub">questo mese</div></div>'+
     '<div class="stat"><div class="stat-num">'+oc+'</div><div class="stat-label">Giorni liberi</div><div class="stat-sub">questo mese</div></div>'+
@@ -342,10 +359,10 @@ function openModal(k){
   if(isSwapDay(k)) mOpt='swap';
   else if(isVac(st)) mOpt='vacation';
   else mOpt=st;
-  var DF2=DF;
-  document.getElementById('modalTitle').textContent=DF2[d.getDay()]+' '+d.getDate();
+  document.getElementById('modalTitle').textContent=DF[d.getDay()]+' '+d.getDate();
   document.getElementById('modalDate').textContent=d.getDate()+' '+M[d.getMonth()]+' '+d.getFullYear();
   document.getElementById('resetLink').style.display=(overrides[k]||isSwapDay(k))?'block':'none';
+  document.getElementById('noteInput').value=notes[k]||'';
   updModal();
   document.getElementById('modalOverlay').classList.add('active');
 }
@@ -369,6 +386,10 @@ function updModal(){
 function saveModal(){
   if(!mDateKey) return;
   var k=mDateKey;
+  var noteVal=document.getElementById('noteInput').value.trim();
+  if(noteVal) notes[k]=noteVal;
+  else delete notes[k];
+
   var existingSwap=swaps.find(function(s){ return s.d1===k; });
   if(existingSwap && mOpt!=='swap'){
     swapDates=swapDates.filter(function(s){ return s.id!==existingSwap.id; });
@@ -534,7 +555,23 @@ function deleteSwap(id){
   renderSwapList();render();
 }
 
-// ── PERSISTENZA ──────────────────────────────────────────────────────
+function renderNoteList(){
+  var el=document.getElementById('noteList');
+  var keys=Object.keys(notes).filter(function(k){return notes[k]&&notes[k].trim();});
+  if(!keys.length){el.innerHTML='<div class="empty-state">Nessuna nota registrata</div>';return;}
+  keys.sort();
+  el.innerHTML='<div class="item-list">'+keys.map(function(k){
+    var d=kd(k);
+    var label=DF[d.getDay()]+' '+d.getDate()+' '+M[d.getMonth()]+' '+d.getFullYear();
+    return '<div class="list-item note-item"><div style="flex:1"><div class="note-date-label">'+label+'</div><div class="note-text">'+notes[k].replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div></div><button class="del-btn" onclick="deleteNote(\''+k+'\')">&#10005;</button></div>';
+  }).join('')+'</div>';
+}
+
+function deleteNote(k){
+  delete notes[k];
+  renderNoteList();render();saveData();
+}
+
 function saveData(){
   try{
     var data={
@@ -546,6 +583,7 @@ function saveData(){
       swapDates: swapDates.map(function(s){
         return {id:s.id,date:s.date.toISOString()};
       }),
+      notes: notes,
       uid: uid
     };
     localStorage.setItem('turni_v1', JSON.stringify(data));
@@ -566,10 +604,10 @@ function loadData(){
     swapDates=(data.swapDates||[]).map(function(s){
       return {id:s.id,date:new Date(s.date)};
     });
+    notes=data.notes||{};
   }catch(e){}
 }
 
-// ── ESPORTA / IMPORTA ────────────────────────────────────────────────
 function esportaDati(){
   try{
     var data={
@@ -581,6 +619,7 @@ function esportaDati(){
       swapDates: swapDates.map(function(s){
         return {id:s.id,date:s.date.toISOString()};
       }),
+      notes: notes,
       uid: uid
     };
     var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
@@ -607,6 +646,7 @@ function importaDati(event){
       swapDates=(data.swapDates||[]).map(function(s){
         return {id:s.id,date:new Date(s.date)};
       });
+      notes=data.notes||{};
       saveData();
       render();
       alert('Dati importati!');
