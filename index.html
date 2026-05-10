@@ -75,15 +75,18 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 .btn{padding:.6rem 1.3rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.78rem;cursor:pointer;letter-spacing:.06em;border:1px solid;}
 .btn-primary{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600;}
 .btn-ghost{background:transparent;border-color:var(--border);color:var(--muted);}
+.btn-danger{background:transparent;border-color:#ff3b30;color:#ff3b30;}
 .item-list{display:flex;flex-direction:column;gap:.5rem;margin-top:.6rem;}
 .list-item{display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;}
 .list-item.swap-item{border-color:rgba(167,139,250,.3);}
 .list-item.note-item{border-color:rgba(245,200,66,.25);align-items:flex-start;}
+.list-item.backup-item{border-color:rgba(255,170,0,.2);align-items:flex-start;}
 .item-main{font-size:.8rem;color:var(--text);font-weight:500;}
 .item-sub{font-size:.66rem;color:var(--muted);margin-top:.12rem;}
 .item-right{display:flex;align-items:center;gap:.8rem;}
 .item-count{font-family:'Fraunces',serif;font-size:1.1rem;font-weight:700;color:var(--vacation);}
 .del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:.2rem;flex-shrink:0;}
+.restore-btn{background:none;border:1px solid var(--accent);color:var(--accent);cursor:pointer;font-size:.65rem;padding:.3rem .6rem;border-radius:6px;font-family:'DM Mono',monospace;flex-shrink:0;}
 .empty-state{text-align:center;color:var(--muted);font-size:.76rem;padding:1.2rem 0;}
 .vantaggio-bar{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:1.2rem;}
 .vant-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center;}
@@ -97,7 +100,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 .vant-label{font-size:.62rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-align:center;margin-bottom:.8rem;}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:100;align-items:center;justify-content:center;}
 .modal-overlay.active{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.8rem;width:min(400px,94vw);}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.8rem;width:min(400px,94vw);max-height:90vh;overflow-y:auto;}
 .modal-title{font-family:'Fraunces',serif;font-size:1.4rem;font-weight:600;margin-bottom:.2rem;}
 .modal-date{font-size:.66rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:1.4rem;}
 .modal-sec-label{font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.55rem;}
@@ -112,12 +115,17 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 .note-area::placeholder{color:var(--muted);}
 .modal-actions{display:flex;gap:.7rem;justify-content:flex-end;}
 .reset-link{display:block;text-align:center;background:none;border:none;color:var(--muted);font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;margin-top:.7rem;text-decoration:underline;}
-.data-bar{max-width:960px;margin:0 auto 1.2rem;display:flex;gap:.5rem;justify-content:flex-end;}
+.data-bar{max-width:960px;margin:0 auto 1.2rem;display:flex;gap:.5rem;justify-content:flex-end;flex-wrap:wrap;}
 .data-btn{background:var(--surface);border:1px solid var(--border);color:#fff;font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;padding:.45rem .85rem;border-radius:8px;cursor:pointer;}
 .data-btn:hover{border-color:var(--accent);color:var(--accent);}
 .import-input{display:none;}
+.sync-status{max-width:960px;margin:0 auto .8rem;font-size:.65rem;color:var(--muted);text-align:right;letter-spacing:.06em;}
+.sync-status.ok{color:var(--today);}
+.sync-status.err{color:var(--vacation);}
 .note-text{font-size:.78rem;color:var(--text);margin-top:.3rem;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
 .note-date-label{font-size:.62rem;color:var(--note);font-weight:700;}
+.backup-date{font-size:.72rem;color:var(--accent);font-weight:600;}
+.backup-info{font-size:.63rem;color:var(--muted);margin-top:.2rem;}
 </style>
 </head>
 <body>
@@ -138,7 +146,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
   <button class="tab active" id="tab0" onclick="showTab(0)">📅 Calendario</button>
   <button class="tab" id="tab1" onclick="showTab(1)">🌴 Ferie</button>
   <button class="tab" id="tab2" onclick="showTab(2)">📝 Note</button>
+  <button class="tab" id="tab3" onclick="showTab(3)">💾 Backup</button>
 </div>
+
+<div class="sync-status" id="syncStatus">⏳ Connessione Firebase...</div>
 
 <div class="data-bar">
   <button class="data-btn" onclick="esportaDati()">&#8595; Esporta dati</button>
@@ -154,7 +165,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
     <div class="legend-item"><div class="legend-dot" style="background:var(--vac-me)"></div>Ferie mie</div>
     <div class="legend-item"><div class="legend-dot" style="background:var(--vac-sil)"></div>Ferie Silvano</div>
     <div class="legend-item"><div class="legend-dot" style="background:var(--swap);border-radius:50%"></div>Cambio turno</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--note);border-radius:50%"></div>Nota</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff3b30;border-radius:50%"></div>Nota</div>
   </div>
   <button class="segna-btn" id="segnaBtnMain" onclick="toggleSelMode()">🌴 Segna ferie</button>
   <div class="sel-bar" id="selBar">
@@ -203,6 +214,14 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
   </div>
 </div>
 
+<div class="panel" id="panel3">
+  <div class="card">
+    <h3 style="color:var(--accent)">💾 Ultimi backup</h3>
+    <p style="font-size:.7rem;color:var(--muted);margin-bottom:1rem;">Ogni salvataggio crea automaticamente un backup. Puoi ripristinare uno dei 4 più recenti.</p>
+    <div id="backupList"><div class="empty-state">Nessun backup disponibile</div></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalOverlay" onclick="bgCloseModal(event)">
   <div class="modal">
     <div class="modal-title" id="modalTitle"></div>
@@ -225,13 +244,31 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 </div>
 
 <script>
-var ANCHOR = new Date(2026, 2, 8);
-var CYCLE  = [true,true,false,true,false,true,true,false,false,true,false,true,false,false];
-var TODAY  = new Date(2026, 2, 15);
+// ── FIREBASE CONFIG ───────────────────────────────────────────────────
+var FB_URL = 'https://turni-lavoro-52db4-default-rtdb.europe-west1.firebasedatabase.app';
+
+function fbGet(path){
+  return fetch(FB_URL+path+'.json').then(function(r){return r.json();});
+}
+function fbSet(path, data){
+  return fetch(FB_URL+path+'.json',{method:'PUT',body:JSON.stringify(data)}).then(function(r){return r.json();});
+}
+function fbPatch(path, data){
+  return fetch(FB_URL+path+'.json',{method:'PATCH',body:JSON.stringify(data)}).then(function(r){return r.json();});
+}
+
+// ── COSTANTI ──────────────────────────────────────────────────────────
+var CYCLE = [true,true,false,true,false,true,true,false,false,true,false,true,false,false];
 var M  = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 var DF = ['Domenica','Lunedi','Martedi','Mercoledi','Giovedi','Venerdi','Sabato'];
-var currentYear = 2026, currentMonth = 2;
 
+// Data corrente reale
+var NOW = new Date();
+var TODAY = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate());
+var currentYear = NOW.getFullYear();
+var currentMonth = NOW.getMonth();
+
+// ── STATO ────────────────────────────────────────────────────────────
 var overrides  = {};
 var vacations  = [];
 var swaps      = [];
@@ -240,7 +277,9 @@ var notes      = {};
 var uid        = 1;
 var selMode = false, selStep = 0, selStart = null, selEnd = null;
 var mDateKey = null, mOpt = null;
+var firebaseOk = false;
 
+// ── UTILS ─────────────────────────────────────────────────────────────
 function dk(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function kd(k){ var p=k.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
 
@@ -279,13 +318,156 @@ function countYearlyVacations(){
   return {vmYear:vmYear, vsYear:vsYear};
 }
 
+function setSyncStatus(msg, cls){
+  var el=document.getElementById('syncStatus');
+  el.textContent=msg;
+  el.className='sync-status'+(cls?' '+cls:'');
+}
+
+// ── FIREBASE SYNC ─────────────────────────────────────────────────────
+function buildPayload(){
+  return {
+    overrides: overrides,
+    vacations: vacations.map(function(v){
+      return {id:v.id,who:v.who,from:v.from.toISOString(),to:v.to.toISOString(),workDays:v.workDays,days:v.days};
+    }),
+    swaps: swaps,
+    swapDates: swapDates.map(function(s){
+      return {id:s.id,date:s.date.toISOString()};
+    }),
+    notes: notes,
+    uid: uid
+  };
+}
+
+function applyPayload(data){
+  overrides = data.overrides||{};
+  uid = data.uid||1;
+  vacations = (data.vacations||[]).map(function(v){
+    return {id:v.id,who:v.who,from:new Date(v.from),to:new Date(v.to),workDays:v.workDays,days:v.days};
+  });
+  swaps = data.swaps||[];
+  swapDates = (data.swapDates||[]).map(function(s){
+    return {id:s.id,date:new Date(s.date)};
+  });
+  notes = data.notes||{};
+}
+
+function saveToFirebase(){
+  if(!firebaseOk) return;
+  var payload = buildPayload();
+
+  // Prima leggo i backup esistenti
+  fbGet('/backups').then(function(existing){
+    var list = existing ? Object.values(existing) : [];
+    // Ordino per timestamp
+    list.sort(function(a,b){ return b.ts - a.ts; });
+    // Tengo solo gli ultimi 3 (per fare spazio al nuovo)
+    list = list.slice(0,3);
+
+    // Creo nuovo backup
+    var newBackup = {
+      ts: Date.now(),
+      label: new Date().toLocaleString('it-IT'),
+      data: payload
+    };
+
+    // Ricostruisco oggetto backup con max 4
+    var newBackups = {};
+    newBackups['b'+Date.now()] = newBackup;
+    list.forEach(function(b,i){ newBackups['b'+(b.ts)] = b; });
+
+    // Salvo dati principali + backups
+    fbSet('/dati', payload).then(function(){
+      fbSet('/backups', newBackups).then(function(){
+        setSyncStatus('✓ Sincronizzato · '+new Date().toLocaleTimeString('it-IT'), 'ok');
+        localStorage.setItem('turni_v1', JSON.stringify(payload));
+      });
+    }).catch(function(){
+      setSyncStatus('⚠️ Errore salvataggio Firebase', 'err');
+    });
+  }).catch(function(){
+    // Se i backup non esistono, salvo solo i dati
+    fbSet('/dati', payload).then(function(){
+      setSyncStatus('✓ Sincronizzato · '+new Date().toLocaleTimeString('it-IT'), 'ok');
+      localStorage.setItem('turni_v1', JSON.stringify(payload));
+    });
+  });
+}
+
+function loadFromFirebase(){
+  setSyncStatus('⏳ Caricamento dati...','');
+  fbGet('/dati').then(function(data){
+    if(data){
+      applyPayload(data);
+      localStorage.setItem('turni_v1', JSON.stringify(data));
+      firebaseOk=true;
+      setSyncStatus('✓ Dati caricati · '+new Date().toLocaleTimeString('it-IT'),'ok');
+    } else {
+      // Firebase vuoto, carico da localStorage e carico su Firebase
+      loadFromLocalStorage();
+      firebaseOk=true;
+      setSyncStatus('✓ Connesso (dati locali)','ok');
+      saveToFirebase();
+    }
+    render();
+  }).catch(function(){
+    setSyncStatus('⚠️ Offline · dati locali','err');
+    loadFromLocalStorage();
+    render();
+  });
+}
+
+function loadFromLocalStorage(){
+  try{
+    var raw=localStorage.getItem('turni_v1');
+    if(!raw) return;
+    applyPayload(JSON.parse(raw));
+  }catch(e){}
+}
+
+// ── BACKUP ────────────────────────────────────────────────────────────
+function renderBackupList(){
+  var el=document.getElementById('backupList');
+  fbGet('/backups').then(function(data){
+    if(!data){el.innerHTML='<div class="empty-state">Nessun backup disponibile</div>';return;}
+    var list=Object.values(data);
+    list.sort(function(a,b){return b.ts-a.ts;});
+    list=list.slice(0,4);
+    if(!list.length){el.innerHTML='<div class="empty-state">Nessun backup disponibile</div>';return;}
+    el.innerHTML='<div class="item-list">'+list.map(function(b,i){
+      var vacCount=Object.values(b.data.overrides||{}).filter(function(v){return v==='vac-me'||v==='vac-sil';}).length;
+      var noteCount=Object.keys(b.data.notes||{}).length;
+      return '<div class="list-item backup-item"><div style="flex:1"><div class="backup-date">'+(i===0?'⭐ Più recente: ':'')+b.label+'</div><div class="backup-info">'+vacCount+' giorni ferie · '+noteCount+' note</div></div><button class="restore-btn" onclick="restoreBackup('+b.ts+')">Ripristina</button></div>';
+    }).join('')+'</div>';
+  }).catch(function(){
+    el.innerHTML='<div class="empty-state">Errore caricamento backup</div>';
+  });
+}
+
+function restoreBackup(ts){
+  if(!confirm('Ripristinare questo backup? I dati attuali verranno sovrascritti.')) return;
+  fbGet('/backups').then(function(data){
+    var list=Object.values(data);
+    var b=list.find(function(x){return x.ts===ts;});
+    if(!b){alert('Backup non trovato');return;}
+    applyPayload(b.data);
+    render();
+    saveToFirebase();
+    showTab(0);
+    alert('Backup ripristinato!');
+  });
+}
+
+// ── UI ────────────────────────────────────────────────────────────────
 function showTab(n){
-  for(var i=0;i<3;i++){
+  for(var i=0;i<4;i++){
     document.getElementById('tab'+i).classList.toggle('active',i===n);
     document.getElementById('panel'+i).classList.toggle('active',i===n);
   }
   if(n===1){ renderVacList(); renderSwapList(); }
   if(n===2){ renderNoteList(); }
+  if(n===3){ renderBackupList(); }
 }
 
 function changeMonth(dir){
@@ -411,7 +593,7 @@ function saveModal(){
   }
   document.getElementById('modalOverlay').classList.remove('active');
   mDateKey=null; mOpt=null;
-  render(); saveData();
+  render(); saveToFirebase();
 }
 
 function resetModal(){
@@ -425,7 +607,7 @@ function resetModal(){
   }
   document.getElementById('modalOverlay').classList.remove('active');
   mDateKey=null; mOpt=null;
-  render(); saveData();
+  render(); saveToFirebase();
 }
 
 function toggleSelMode(){
@@ -488,7 +670,7 @@ function salvaFerieSelezionate(chi){
   var st=chi==='me'?'vac-me':'vac-sil';
   days.forEach(function(k){overrides[k]=st;});
   vacations.push({id:uid++,who:chi==='me'?'Io':'Silvano',from:from,to:to,workDays:days.length,days:days});
-  clearSelection();render();saveData();
+  clearSelection();render();saveToFirebase();
   showTab(1);
 }
 
@@ -538,7 +720,7 @@ function deleteVac(id){
   var v=vacations.find(function(x){return x.id===id;});if(!v)return;
   v.days.forEach(function(k){if(overrides[k]==='vac-me'||overrides[k]==='vac-sil')delete overrides[k];});
   vacations=vacations.filter(function(x){return x.id!==id;});
-  renderVacList();render();saveData();
+  renderVacList();render();saveToFirebase();
 }
 
 function renderSwapList(){
@@ -552,7 +734,7 @@ function renderSwapList(){
 function deleteSwap(id){
   swapDates=swapDates.filter(function(s){return s.id!==id;});
   swaps=swaps.filter(function(s){return s.id!==id;});
-  renderSwapList();render();
+  renderSwapList();render();saveToFirebase();
 }
 
 function renderNoteList(){
@@ -569,59 +751,13 @@ function renderNoteList(){
 
 function deleteNote(k){
   delete notes[k];
-  renderNoteList();render();saveData();
+  renderNoteList();render();saveToFirebase();
 }
 
-function saveData(){
-  try{
-    var data={
-      overrides: overrides,
-      vacations: vacations.map(function(v){
-        return {id:v.id,who:v.who,from:v.from.toISOString(),to:v.to.toISOString(),workDays:v.workDays,days:v.days};
-      }),
-      swaps: swaps,
-      swapDates: swapDates.map(function(s){
-        return {id:s.id,date:s.date.toISOString()};
-      }),
-      notes: notes,
-      uid: uid
-    };
-    localStorage.setItem('turni_v1', JSON.stringify(data));
-  }catch(e){}
-}
-
-function loadData(){
-  try{
-    var raw=localStorage.getItem('turni_v1');
-    if(!raw) return;
-    var data=JSON.parse(raw);
-    overrides=data.overrides||{};
-    uid=data.uid||1;
-    vacations=(data.vacations||[]).map(function(v){
-      return {id:v.id,who:v.who,from:new Date(v.from),to:new Date(v.to),workDays:v.workDays,days:v.days};
-    });
-    swaps=data.swaps||[];
-    swapDates=(data.swapDates||[]).map(function(s){
-      return {id:s.id,date:new Date(s.date)};
-    });
-    notes=data.notes||{};
-  }catch(e){}
-}
-
+// ── ESPORTA / IMPORTA ────────────────────────────────────────────────
 function esportaDati(){
   try{
-    var data={
-      overrides: overrides,
-      vacations: vacations.map(function(v){
-        return {id:v.id,who:v.who,from:v.from.toISOString(),to:v.to.toISOString(),workDays:v.workDays,days:v.days};
-      }),
-      swaps: swaps,
-      swapDates: swapDates.map(function(s){
-        return {id:s.id,date:s.date.toISOString()};
-      }),
-      notes: notes,
-      uid: uid
-    };
+    var data=buildPayload();
     var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
     var url=URL.createObjectURL(blob);
     var a=document.createElement('a');
@@ -637,27 +773,20 @@ function importaDati(event){
   reader.onload=function(e){
     try{
       var data=JSON.parse(e.target.result);
-      overrides=data.overrides||{};
-      uid=data.uid||1;
-      vacations=(data.vacations||[]).map(function(v){
-        return {id:v.id,who:v.who,from:new Date(v.from),to:new Date(v.to),workDays:v.workDays,days:v.days};
-      });
-      swaps=data.swaps||[];
-      swapDates=(data.swapDates||[]).map(function(s){
-        return {id:s.id,date:new Date(s.date)};
-      });
-      notes=data.notes||{};
-      saveData();
+      applyPayload(data);
       render();
-      alert('Dati importati!');
+      saveToFirebase();
+      alert('Dati importati e sincronizzati!');
     }catch(err){ alert('Errore importazione: '+err.message); }
   };
   reader.readAsText(file);
   event.target.value='';
 }
 
-loadData();
+// ── AVVIO ─────────────────────────────────────────────────────────────
+loadFromLocalStorage();
 render();
+loadFromFirebase();
 </script>
 
 </body>
