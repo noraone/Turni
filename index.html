@@ -168,7 +168,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 <div class="hdr">
   <div>
     <div class="title">Turni</div>
-    <div class="subtitle">Calendario lavoro · Due soci ✓ · v6</div>
+    <div class="subtitle">Calendario lavoro · Due soci ✓ · v13</div>
   </div>
   <div class="nav">
     <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
@@ -216,6 +216,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
     <div class="sel-btns" id="selBtns">
       <button class="sel-btn sel-me" onclick="salvaFerie('me')">🌴 Ferie mie</button>
       <button class="sel-btn sel-sil" onclick="salvaFerie('silvano')">🌴 Ferie Silvano</button>
+      <button class="sel-btn" style="background:transparent;border-color:rgba(255,255,255,.5);color:#fff;" onclick="ripristinaSelezionati()">↩ Ripristina</button>
     </div>
   </div>
   <div class="wdays" id="wdays"></div>
@@ -313,15 +314,46 @@ function adjDays(){
   var adj={};
   var me=Object.keys(ov).filter(function(k){return ov[k]==='vac-me';});
   var sil=Object.keys(ov).filter(function(k){return ov[k]==='vac-sil';});
-  function calc(days,type){
-    var set=new Set(days);
-    days.forEach(function(k){
-      [-1,1].forEach(function(n){
-        var nk=dk(addD(kd(k),n));
-        if(!set.has(nk)&&!ov[nk]) adj[nk]=type;
-      });
+
+  // Per le ferie di "chi", trova i giorni adiacenti in cui "l'altro" lavora in continuità
+  // L'altro lavora quando: isWork(d) per me, !isWork(d) per silvano (ciclo invertito)
+  function calc(vacDays, type){
+    if(!vacDays.length) return;
+    var set=new Set(vacDays);
+    // Trova i bordi del blocco ferie (primo e ultimo giorno)
+    var sorted=vacDays.slice().sort();
+
+    // Espandi in entrambe le direzioni cercando giorni di lavoro dell'altro
+    // type='adj-me' = ferie mie, l'altro che lavora è Silvano (ciclo invertito = !isWork)
+    // type='adj-sil' = ferie Silvano, l'altro che lavora sono io (isWork)
+    function altroLavora(d){
+      return type==='adj-me' ? !isWork(d) : isWork(d);
+    }
+
+    sorted.forEach(function(k){
+      // Prima
+      var prev=new Date(kd(k)); prev.setDate(prev.getDate()-1);
+      while(!set.has(dk(prev))){
+        var pk=dk(prev);
+        if(ov[pk]) break; // se c'è un override (ferie dell'altro ecc) mi fermo
+        if(altroLavora(prev)){
+          adj[pk]=type;
+          prev.setDate(prev.getDate()-1);
+        } else break;
+      }
+      // Dopo
+      var next=new Date(kd(k)); next.setDate(next.getDate()+1);
+      while(!set.has(dk(next))){
+        var nk=dk(next);
+        if(ov[nk]) break;
+        if(altroLavora(next)){
+          adj[nk]=type;
+          next.setDate(next.getDate()+1);
+        } else break;
+      }
     });
   }
+
   calc(me,'adj-me');
   calc(sil,'adj-sil');
   return adj;
@@ -514,9 +546,9 @@ function render(){
     '<div class="stat"><div class="sn">'+oc+'</div><div class="sl">Giorni liberi</div><div class="ss">questo mese</div></div>'+
     '<div class="stat"><div class="sn" style="color:var(--swap)">'+sc+'</div><div class="sl">Cambi turno</div><div class="ss">questo mese</div></div>'+
     '<div class="stat"><div class="sn" style="color:var(--vac-me)">'+cov.vm+'</div><div class="sl">Ferie mie</div><div class="ss">totale '+cy+'</div></div>'+
-    '<div class="stat"><div class="sn" style="color:var(--today)">'+cov.vmc+'</div><div class="sl">Giorni coperti miei</div><div class="ss">ferie + riposi adiac.</div></div>'+
     '<div class="stat"><div class="sn" style="color:var(--vac-sil)">'+cov.vs+'</div><div class="sl">Ferie Silvano</div><div class="ss">totale '+cy+'</div></div>'+
-    '<div class="stat"><div class="sn" style="color:#c4b5fd">'+cov.vsc+'</div><div class="sl">Giorni coperti Silvano</div><div class="ss">ferie + riposi adiac.</div></div>'+
+    '<div class="stat"><div class="sn" style="color:var(--today)">'+cov.vsc+'</div><div class="sl">Giorni coperti a Silvano</div><div class="ss">gg lavorativi continuativi</div></div>'+
+    '<div class="stat"><div class="sn" style="color:#c4b5fd">'+cov.vmc+'</div><div class="sl">Giorni coperti a me</div><div class="ss">gg lavorativi continuativi</div></div>'+
     '<div class="stat" style="opacity:0"></div><div class="stat" style="opacity:0"></div>';
 }
 
@@ -628,6 +660,23 @@ function hilite(){
     if(el) el.classList.add(cur.getTime()===selS.getTime()||cur.getTime()===end.getTime()?'sel-s':'sel-r');
     cur.setDate(cur.getDate()+1);
   }
+}
+
+function ripristinaSelezionati(){
+  if(!selS) return;
+  var from=new Date(selS), to=selE?new Date(selE):new Date(selS);
+  var cur=new Date(from);
+  while(cur<=to){
+    var k=dk(cur);
+    // Rimuovi override e rimuovi dalle vacations
+    delete ov[k];
+    vac=vac.filter(function(v){
+      v.days=v.days.filter(function(d){return d!==k;});
+      return v.days.length>0;
+    });
+    cur.setDate(cur.getDate()+1);
+  }
+  clearSel(); render(); saveFB();
 }
 
 function salvaFerie(chi){
