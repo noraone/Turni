@@ -168,7 +168,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 <div class="hdr">
   <div>
     <div class="title">Turni</div>
-    <div class="subtitle">Calendario lavoro · Due soci ✓ · v18</div>
+    <div class="subtitle">Calendario lavoro · Due soci ✓ · v21</div>
   </div>
   <div class="nav">
     <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
@@ -379,13 +379,30 @@ function yearlyCov(){
   return {vm:vm,vs:vs,vmc:vm+vmc,vsc:vs+vsc};
 }
 
-function totalVacations(){
-  var vm=0,vs=0;
-  Object.keys(ov).forEach(function(k){
-    if(ov[k]==='vac-me') vm++;
-    else if(ov[k]==='vac-sil') vs++;
-  });
-  return {vm:vm,vs:vs};
+function nonWorkedUpTo(endDate){
+  var keys=Object.keys(ov);
+  if(!keys.length) return {vm:0,vs:0};
+  var minKey=keys.slice().sort()[0];
+  var cur=new Date(kd(minKey).getFullYear(),0,1);
+  var end=new Date(endDate);
+  var nm=0,ns=0;
+  while(cur<=end){
+    var st=getSt(cur);
+    if(st==='off'||st==='vac-me') nm++;
+    if(st==='work'||st==='vac-sil') ns++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return {vm:nm,vs:ns};
+}
+
+function restBalance(){
+  var totNow=nonWorkedUpTo(TODAY);
+  var diffNow=totNow.vs-totNow.vm; // positivo = Silvano ha più riposo
+  var lastDayPrevYear=new Date(cy-1,11,31);
+  var totPrev=nonWorkedUpTo(lastDayPrevYear);
+  var diffPrev=totPrev.vs-totPrev.vm;
+  var diffThisYear=diffNow-diffPrev;
+  return {diffNow:diffNow,diffPrev:diffPrev,diffThisYear:diffThisYear};
 }
 
 // ── FIREBASE ──────────────────────────────────────────────────────────
@@ -599,7 +616,12 @@ function render(){
   if(selMode) hilite();
 
   var cov=yearlyCov();
-  var tot=totalVacations();
+  var bal=restBalance();
+  var chiVince=bal.diffNow>=0?'Silvano':'Io';
+  var chiColor=bal.diffNow>=0?'var(--vac-sil)':'var(--vac-me)';
+  var absNow=Math.abs(bal.diffNow);
+  var absThis=Math.abs(bal.diffThisYear);
+  var absPrev=Math.abs(bal.diffPrev);
   document.getElementById('stats').innerHTML=
     '<div class="stat"><div class="sn">'+wc+'</div><div class="sl">Turni lavoro</div><div class="ss">questo mese</div></div>'+
     '<div class="stat"><div class="sn">'+oc+'</div><div class="sl">Giorni liberi</div><div class="ss">questo mese</div></div>'+
@@ -609,8 +631,7 @@ function render(){
     '<div class="stat"><div class="sn" style="color:var(--today)">'+cov.vsc+'</div><div class="sl">Giorni coperti a Silvano</div><div class="ss">gg lavorativi continuativi</div></div>'+
     '<div class="stat"><div class="sn" style="color:#c4b5fd">'+cov.vmc+'</div><div class="sl">Giorni coperti a me</div><div class="ss">gg lavorativi continuativi</div></div>'+
     '<div class="stat" style="opacity:0"></div>'+
-    '<div class="stat"><div class="sn" style="color:var(--vac-me)">'+tot.vm+'</div><div class="sl">Ferie mie totali</div><div class="ss">tutti gli anni</div></div>'+
-    '<div class="stat"><div class="sn" style="color:var(--vac-sil)">'+tot.vs+'</div><div class="sl">Ferie Silvano totali</div><div class="ss">tutti gli anni</div></div>';
+    '<div class="stat" style="grid-column:1/-1;padding:1rem;"><div class="sn" style="color:'+chiColor+';font-size:2.2rem;">'+chiVince+' +'+absNow+'</div><div class="sl">giorni di riposo in più (saldo totale)</div><div class="ss">di cui '+absPrev+' da anni precedenti · '+absThis+' quest\'anno</div></div>';
 }
 
 // ── MODAL ─────────────────────────────────────────────────────────────
