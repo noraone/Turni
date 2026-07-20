@@ -168,7 +168,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 <div class="hdr">
   <div>
     <div class="title">Turni</div>
-    <div class="subtitle">Calendario lavoro · Due soci ✓ · v17</div>
+    <div class="subtitle">Calendario lavoro · Due soci ✓ · v18</div>
   </div>
   <div class="nav">
     <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
@@ -377,6 +377,15 @@ function yearlyCov(){
     else if(adj[k]==='adj-sil') vsc++;
   });
   return {vm:vm,vs:vs,vmc:vm+vmc,vsc:vs+vsc};
+}
+
+function totalVacations(){
+  var vm=0,vs=0;
+  Object.keys(ov).forEach(function(k){
+    if(ov[k]==='vac-me') vm++;
+    else if(ov[k]==='vac-sil') vs++;
+  });
+  return {vm:vm,vs:vs};
 }
 
 // ── FIREBASE ──────────────────────────────────────────────────────────
@@ -590,6 +599,7 @@ function render(){
   if(selMode) hilite();
 
   var cov=yearlyCov();
+  var tot=totalVacations();
   document.getElementById('stats').innerHTML=
     '<div class="stat"><div class="sn">'+wc+'</div><div class="sl">Turni lavoro</div><div class="ss">questo mese</div></div>'+
     '<div class="stat"><div class="sn">'+oc+'</div><div class="sl">Giorni liberi</div><div class="ss">questo mese</div></div>'+
@@ -598,7 +608,9 @@ function render(){
     '<div class="stat"><div class="sn" style="color:var(--vac-sil)">'+cov.vs+'</div><div class="sl">Ferie Silvano</div><div class="ss">totale '+cy+'</div></div>'+
     '<div class="stat"><div class="sn" style="color:var(--today)">'+cov.vsc+'</div><div class="sl">Giorni coperti a Silvano</div><div class="ss">gg lavorativi continuativi</div></div>'+
     '<div class="stat"><div class="sn" style="color:#c4b5fd">'+cov.vmc+'</div><div class="sl">Giorni coperti a me</div><div class="ss">gg lavorativi continuativi</div></div>'+
-    '<div class="stat" style="opacity:0"></div><div class="stat" style="opacity:0"></div>';
+    '<div class="stat" style="opacity:0"></div>'+
+    '<div class="stat"><div class="sn" style="color:var(--vac-me)">'+tot.vm+'</div><div class="sl">Ferie mie totali</div><div class="ss">tutti gli anni</div></div>'+
+    '<div class="stat"><div class="sn" style="color:var(--vac-sil)">'+tot.vs+'</div><div class="sl">Ferie Silvano totali</div><div class="ss">tutti gli anni</div></div>';
 }
 
 // ── MODAL ─────────────────────────────────────────────────────────────
