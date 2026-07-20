@@ -168,7 +168,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 <div class="hdr">
   <div>
     <div class="title">Turni</div>
-    <div class="subtitle">Calendario lavoro · Due soci ✓ · v22</div>
+    <div class="subtitle">Calendario lavoro · Due soci ✓ · v23</div>
   </div>
   <div class="nav">
     <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
@@ -213,6 +213,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
       <div class="sel-lbl" id="selLbl">Tocca il primo giorno</div>
       <button class="sel-cancel" onclick="clearSel()">Annulla</button>
     </div>
+    <input type="text" id="destInput" placeholder="Destinazione (opzionale, es. mare, montagna...)" style="display:none;width:100%;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:7px;color:#fff;font-family:'DM Mono',monospace;font-size:.75rem;padding:.5rem .7rem;margin-bottom:.5rem;" />
     <div class="sel-btns" id="selBtns">
       <button class="sel-btn sel-me" onclick="salvaFerie('me')">🌴 Ferie mie</button>
       <button class="sel-btn sel-sil" onclick="salvaFerie('silvano')">🌴 Ferie Silvano</button>
@@ -282,7 +283,7 @@ var DF = ['Domenica','Lunedi','Martedi','Mercoledi','Giovedi','Venerdi','Sabato'
 var NOW = new Date();
 var TODAY = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate());
 var cy = NOW.getFullYear(), cm = NOW.getMonth();
-var ov = {}, vac = [], sw = [], swd = [], nt = {}, uid = 1;
+var ov = {}, vac = [], sw = [], swd = [], nt = {}, uid = 1, ib = 13;
 var selMode = false, selStep = 0, selS = null, selE = null;
 var mKey = null, mOpt = null, fbOk = false;
 
@@ -397,10 +398,10 @@ function nonWorkedUpTo(endDate){
 
 function restBalance(){
   var totNow=nonWorkedUpTo(TODAY);
-  var diffNow=totNow.vs-totNow.vm; // positivo = Silvano ha più riposo
+  var diffNow=(totNow.vs-totNow.vm)+ib; // positivo = Silvano ha più riposo; +ib saldo pre-tracciamento
   var lastDayPrevYear=new Date(cy-1,11,31);
   var totPrev=nonWorkedUpTo(lastDayPrevYear);
-  var diffPrev=totPrev.vs-totPrev.vm;
+  var diffPrev=(totPrev.vs-totPrev.vm)+ib;
   var diffThisYear=diffNow-diffPrev;
   return {diffNow:diffNow,diffPrev:diffPrev,diffThisYear:diffThisYear};
 }
@@ -412,15 +413,15 @@ function fbSet(p,d){ return fetch(FB+p+'.json',{method:'PUT',body:JSON.stringify
 function payload(){
   return {
     overrides:ov,
-    vacations:vac.map(function(v){return {id:v.id,who:v.who,from:v.from.toISOString(),to:v.to.toISOString(),workDays:v.workDays,days:v.days};}),
+    vacations:vac.map(function(v){return {id:v.id,who:v.who,from:v.from.toISOString(),to:v.to.toISOString(),workDays:v.workDays,days:v.days,dest:v.dest||''};}),
     swaps:sw, swapDates:swd.map(function(s){return {id:s.id,date:s.date.toISOString()};}),
-    notes:nt, uid:uid
+    notes:nt, uid:uid, ib:ib
   };
 }
 
 function apply(data){
-  ov=data.overrides||{}; uid=data.uid||1;
-  vac=(data.vacations||[]).map(function(v){return {id:v.id,who:v.who,from:new Date(v.from),to:new Date(v.to),workDays:v.workDays,days:v.days};});
+  ov=data.overrides||{}; uid=data.uid||1; ib=(typeof data.ib==='number')?data.ib:13;
+  vac=(data.vacations||[]).map(function(v){return {id:v.id,who:v.who,from:new Date(v.from),to:new Date(v.to),workDays:v.workDays,days:v.days,dest:v.dest||''};});
   sw=data.swaps||[];
   swd=(data.swapDates||[]).map(function(s){return {id:s.id,date:new Date(s.date)};});
   nt=data.notes||{};
@@ -631,7 +632,15 @@ function render(){
     '<div class="stat"><div class="sn" style="color:var(--today)">'+cov.vsc+'</div><div class="sl">Giorni coperti a Silvano</div><div class="ss">gg lavorativi continuativi</div></div>'+
     '<div class="stat"><div class="sn" style="color:#c4b5fd">'+cov.vmc+'</div><div class="sl">Giorni coperti a me</div><div class="ss">gg lavorativi continuativi</div></div>'+
     '<div class="stat" style="opacity:0"></div>'+
-    '<div class="stat" style="grid-column:1/-1;padding:1rem;"><div class="sn" style="color:'+chiColor+';font-size:2.2rem;">'+chiVince+' +'+absNow+'</div><div class="sl">giorni di riposo in più (saldo totale)</div><div class="ss">di cui '+absPrev+' da anni precedenti · '+absThis+' quest\'anno</div></div>';
+    '<div class="stat" style="grid-column:1/-1;padding:1rem;"><div class="sn" style="color:'+chiColor+';font-size:2.2rem;">'+chiVince+' +'+absNow+'</div><div class="sl">giorni di riposo in più (saldo totale)</div><div class="ss">di cui '+absPrev+' da anni precedenti · '+absThis+' quest\'anno</div><div style="margin-top:.6rem;"><button class="reset-lnk" onclick="modificaSaldoIniziale()" style="margin-top:0;">✏️ Modifica saldo pre-tracciamento ('+ib+')</button></div></div>';
+}
+
+function modificaSaldoIniziale(){
+  var val=prompt('Saldo iniziale (giorni extra prima di iniziare a tracciare).\nPositivo = Silvano ha più giorni di riposo.\nNegativo = io ho più giorni di riposo.', ib);
+  if(val===null) return;
+  var n=parseInt(val,10);
+  if(isNaN(n)){ alert('Inserisci un numero valido'); return; }
+  ib=n; render(); saveFB();
 }
 
 // ── MODAL ─────────────────────────────────────────────────────────────
@@ -700,6 +709,8 @@ function toggleSel(){
   selMode=true; selStep=1; selS=null; selE=null;
   document.getElementById('selBar').classList.add('on');
   document.getElementById('selBtns').style.display='none';
+  document.getElementById('destInput').style.display='none';
+  document.getElementById('destInput').value='';
   document.getElementById('selLbl').textContent='Tocca il primo giorno';
   var btn=document.getElementById('ferieBtn');
   btn.textContent='Annulla'; btn.classList.add('active');
@@ -709,6 +720,8 @@ function clearSel(){
   selMode=false; selStep=0; selS=null; selE=null;
   document.getElementById('selBar').classList.remove('on');
   document.getElementById('selBtns').style.display='none';
+  document.getElementById('destInput').style.display='none';
+  document.getElementById('destInput').value='';
   var btn=document.getElementById('ferieBtn');
   btn.textContent='🌴 Segna ferie'; btn.classList.remove('active');
   hilite();
@@ -724,11 +737,13 @@ function handleSel(k){
     var n=Math.round((Date.UTC(selE.getFullYear(),selE.getMonth(),selE.getDate())-Date.UTC(selS.getFullYear(),selS.getMonth(),selS.getDate()))/86400000)+1;
     document.getElementById('selLbl').textContent=n+' giorn'+(n===1?'o':'i')+' selezionat'+(n===1?'o':'i');
     document.getElementById('selBtns').style.display='flex';
+    document.getElementById('destInput').style.display='block';
     hilite();
   } else {
     selS=date; selE=null; selStep=2;
     document.getElementById('selLbl').textContent='Ora tocca l\'ultimo giorno';
     document.getElementById('selBtns').style.display='none';
+    document.getElementById('destInput').style.display='none';
     hilite();
   }
 }
@@ -768,7 +783,8 @@ function salvaFerie(chi){
   while(cur<=to){days.push(dk(cur));cur.setDate(cur.getDate()+1);}
   var st=chi==='me'?'vac-me':'vac-sil';
   days.forEach(function(k){ov[k]=st;});
-  vac.push({id:uid++,who:chi==='me'?'Io':'Silvano',from:from,to:to,workDays:days.length,days:days});
+  var dest=document.getElementById('destInput').value.trim();
+  vac.push({id:uid++,who:chi==='me'?'Io':'Silvano',from:from,to:to,workDays:days.length,days:days,dest:dest});
   clearSel(); render(); saveFB(); showTab(1);
 }
 
@@ -800,7 +816,8 @@ function renderVac(){
   el.innerHTML='<div class="ilist">'+vac.map(function(v){
     var r=analizza(v.who==='Io'?'me':'silvano',v.days);
     var b=r.vant?'<span style="font-size:.56rem;color:var(--accent);margin-left:.4rem;">↑ vantaggio</span>':'';
-    return '<div class="item"><div><div class="im">'+v.who+b+'</div><div class="is">'+v.from.getDate()+' '+M[v.from.getMonth()]+' → '+v.to.getDate()+' '+M[v.to.getMonth()]+' '+v.to.getFullYear()+'</div></div><div class="ir"><div class="ic">'+v.workDays+'gg</div><button class="del" onclick="delVac('+v.id+')">✕</button></div></div>';
+    var destHtml=v.dest?('<div style="font-size:.62rem;color:var(--accent);margin-top:.15rem;">📍 '+v.dest.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>'):'';
+    return '<div class="item"><div><div class="im">'+v.who+b+'</div><div class="is">'+v.from.getDate()+' '+M[v.from.getMonth()]+' → '+v.to.getDate()+' '+M[v.to.getMonth()]+' '+v.to.getFullYear()+'</div>'+destHtml+'</div><div class="ir"><div class="ic">'+v.workDays+'gg</div><button class="del" onclick="delVac('+v.id+')">✕</button></div></div>';
   }).join('')+'</div>';
 }
 
