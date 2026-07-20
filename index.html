@@ -168,7 +168,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 <div class="hdr">
   <div>
     <div class="title">Turni</div>
-    <div class="subtitle">Calendario lavoro · Due soci ✓ · v21</div>
+    <div class="subtitle">Calendario lavoro · Due soci ✓ · v22</div>
   </div>
   <div class="nav">
     <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
@@ -332,7 +332,7 @@ function adjDays(){
     if(!vacDays.length) return;
     var set=new Set(vacDays);
     // Chi copre: adj-sil=io copro (isWork=true), adj-me=Silvano copre (isWork=false)
-    function chiCoprelavora(d){ return type==='adj-sil' ? isWork(d) : !isWork(d); }
+    function chiCoprelavora(d){ var st=getSt(d); return type==='adj-sil' ? st==='work' : st==='off'; }
     // Espandi se chi copre lavora e il giorno non è ferie dell'altro tipo
     function espandi(d){
       var k=dk(d), st=getSt(d);
