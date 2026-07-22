@@ -168,7 +168,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 <div class="hdr">
   <div>
     <div class="title">Turni</div>
-    <div class="subtitle">Calendario lavoro · Due soci ✓ · v23</div>
+    <div class="subtitle">Calendario lavoro · Due soci ✓ · v24</div>
   </div>
   <div class="nav">
     <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
@@ -816,9 +816,18 @@ function renderVac(){
   el.innerHTML='<div class="ilist">'+vac.map(function(v){
     var r=analizza(v.who==='Io'?'me':'silvano',v.days);
     var b=r.vant?'<span style="font-size:.56rem;color:var(--accent);margin-left:.4rem;">↑ vantaggio</span>':'';
-    var destHtml=v.dest?('<div style="font-size:.62rem;color:var(--accent);margin-top:.15rem;">📍 '+v.dest.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>'):'';
+    var destHtml=v.dest?('<div style="font-size:.62rem;color:var(--accent);margin-top:.15rem;cursor:pointer;" onclick="modificaDestinazione('+v.id+')">📍 '+v.dest.replace(/</g,'&lt;').replace(/>/g,'&gt;')+' ✏️</div>'):('<div style="font-size:.6rem;color:var(--muted);margin-top:.15rem;cursor:pointer;text-decoration:underline;" onclick="modificaDestinazione('+v.id+')">+ aggiungi destinazione</div>');
     return '<div class="item"><div><div class="im">'+v.who+b+'</div><div class="is">'+v.from.getDate()+' '+M[v.from.getMonth()]+' → '+v.to.getDate()+' '+M[v.to.getMonth()]+' '+v.to.getFullYear()+'</div>'+destHtml+'</div><div class="ir"><div class="ic">'+v.workDays+'gg</div><button class="del" onclick="delVac('+v.id+')">✕</button></div></div>';
   }).join('')+'</div>';
+}
+
+function modificaDestinazione(id){
+  var v=vac.find(function(x){return x.id===id;});
+  if(!v) return;
+  var val=prompt('Destinazione per queste ferie:', v.dest||'');
+  if(val===null) return;
+  v.dest=val.trim();
+  renderVac(); saveFB();
 }
 
 function delVac(id){
