@@ -168,7 +168,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 <div class="hdr">
   <div>
     <div class="title">Turni</div>
-    <div class="subtitle">Calendario lavoro · Due soci ✓ · v24</div>
+    <div class="subtitle">Calendario lavoro · Due soci ✓ · v26</div>
   </div>
   <div class="nav">
     <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
@@ -378,6 +378,25 @@ function yearlyCov(){
     else if(adj[k]==='adj-sil') vsc++;
   });
   return {vm:vm,vs:vs,vmc:vm+vmc,vsc:vs+vsc};
+}
+
+function yearlyWorked(){
+  var start=new Date(cy,0,1);
+  var end=new Date(TODAY);
+  var wm=0,ws=0;
+  var cur=new Date(start);
+  while(cur<=end){
+    var st=getSt(cur);
+    if(st==='work') wm++;
+    if(st==='vac-me'){} // io non lavoro
+    if(st==='off'){} // io non lavoro
+    if(st==='vac-sil'){} // silvano non lavora
+    if(st==='work') {} // già contato sopra per me
+    // Silvano lavora quando st==='off' (io riposo) o st==='vac-me' (io in ferie, lui copre)
+    if(st==='off'||st==='vac-me') ws++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return {wm:wm,ws:ws};
 }
 
 function nonWorkedUpTo(endDate){
@@ -618,20 +637,20 @@ function render(){
 
   var cov=yearlyCov();
   var bal=restBalance();
+  var wk=yearlyWorked();
   var chiVince=bal.diffNow>=0?'Silvano':'Io';
   var chiColor=bal.diffNow>=0?'var(--vac-sil)':'var(--vac-me)';
   var absNow=Math.abs(bal.diffNow);
   var absThis=Math.abs(bal.diffThisYear);
   var absPrev=Math.abs(bal.diffPrev);
   document.getElementById('stats').innerHTML=
-    '<div class="stat"><div class="sn">'+wc+'</div><div class="sl">Turni lavoro</div><div class="ss">questo mese</div></div>'+
-    '<div class="stat"><div class="sn">'+oc+'</div><div class="sl">Giorni liberi</div><div class="ss">questo mese</div></div>'+
     '<div class="stat"><div class="sn" style="color:var(--swap)">'+sc+'</div><div class="sl">Cambi turno</div><div class="ss">questo mese</div></div>'+
     '<div class="stat"><div class="sn" style="color:var(--vac-me)">'+cov.vm+'</div><div class="sl">Ferie mie</div><div class="ss">totale '+cy+'</div></div>'+
     '<div class="stat"><div class="sn" style="color:var(--vac-sil)">'+cov.vs+'</div><div class="sl">Ferie Silvano</div><div class="ss">totale '+cy+'</div></div>'+
     '<div class="stat"><div class="sn" style="color:var(--today)">'+cov.vsc+'</div><div class="sl">Giorni coperti a Silvano</div><div class="ss">gg lavorativi continuativi</div></div>'+
     '<div class="stat"><div class="sn" style="color:#c4b5fd">'+cov.vmc+'</div><div class="sl">Giorni coperti a me</div><div class="ss">gg lavorativi continuativi</div></div>'+
-    '<div class="stat" style="opacity:0"></div>'+
+    '<div class="stat"><div class="sn" style="color:var(--accent)">'+wk.wm+'</div><div class="sl">Giorni lavorati miei</div><div class="ss">totale '+cy+'</div></div>'+
+    '<div class="stat"><div class="sn" style="color:var(--accent)">'+wk.ws+'</div><div class="sl">Giorni lavorati Silvano</div><div class="ss">totale '+cy+'</div></div>'+
     '<div class="stat" style="grid-column:1/-1;padding:1rem;"><div class="sn" style="color:'+chiColor+';font-size:2.2rem;">'+chiVince+' +'+absNow+'</div><div class="sl">giorni di riposo in più (saldo totale)</div><div class="ss">di cui '+absPrev+' da anni precedenti · '+absThis+' quest\'anno</div><div style="margin-top:.6rem;"><button class="reset-lnk" onclick="modificaSaldoIniziale()" style="margin-top:0;">✏️ Modifica saldo pre-tracciamento ('+ib+')</button></div></div>';
 }
 
