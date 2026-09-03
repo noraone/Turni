@@ -168,7 +168,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 <div class="hdr">
   <div>
     <div class="title">Turni</div>
-    <div class="subtitle">Calendario lavoro · Due soci ✓ · v26</div>
+    <div class="subtitle">Calendario lavoro · Due soci ✓ · v27</div>
   </div>
   <div class="nav">
     <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
@@ -387,12 +387,9 @@ function yearlyWorked(){
   var cur=new Date(start);
   while(cur<=end){
     var st=getSt(cur);
-    if(st==='work') wm++;
-    if(st==='vac-me'){} // io non lavoro
-    if(st==='off'){} // io non lavoro
-    if(st==='vac-sil'){} // silvano non lavora
-    if(st==='work') {} // già contato sopra per me
-    // Silvano lavora quando st==='off' (io riposo) o st==='vac-me' (io in ferie, lui copre)
+    // Io lavoro quando è il mio turno naturale/manuale, oppure Silvano è in ferie (io copro)
+    if(st==='work'||st==='vac-sil') wm++;
+    // Silvano lavora quando io riposo (naturale/manuale) o sono in ferie (lui copre)
     if(st==='off'||st==='vac-me') ws++;
     cur.setDate(cur.getDate()+1);
   }
