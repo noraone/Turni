@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turni Lavoro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:wght@800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0e0c;--surface:#1a1814;--surface2:#242018;--border:#2e2a22;
+  --accent:#ffaa00;--text:#f0ead8;--muted:#7a7060;--today:#7cc8a4;
+  --vacation:#e87d6d;--swap:#a78bfa;--vac-me:#4a9eff;--vac-sil:#a78bfa;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;padding:1.2rem 1rem 5rem;}
+
+/* HEADER */
+.hdr{max-width:960px;margin:0 auto 1.2rem;display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--border);padding-bottom:1rem;flex-wrap:wrap;gap:.6rem;}
+.title{font-family:'Fraunces',serif;font-size:clamp(1.8rem,5vw,2.8rem);font-weight:800;color:var(--accent);line-height:1;}
+.subtitle{font-size:.62rem;color:var(--muted);margin-top:.3rem;letter-spacing:.15em;text-transform:uppercase;}
+.nav{display:flex;gap:.4rem;align-items:center;}
+.nav-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;}
+.month-lbl{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:800;min-width:150px;text-align:center;}
+
+/* TABS */
+.tabs{max-width:960px;margin:0 auto 1.2rem;display:flex;border-bottom:1px solid var(--border);overflow-x:auto;}
+.tab{background:none;border:none;color:var(--muted);font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;padding:.55rem .9rem .8rem;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* SYNC + DATA BAR */
+.sync{max-width:960px;margin:0 auto .5rem;font-size:.62rem;color:var(--muted);text-align:right;}
+.sync.ok{color:var(--today);}
+.sync.err{color:var(--vacation);}
+.bar{max-width:960px;margin:0 auto .9rem;display:flex;gap:.4rem;justify-content:flex-end;flex-wrap:wrap;}
+.bar-btn{background:var(--surface);border:1px solid var(--border);color:#fff;font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;padding:.4rem .75rem;border-radius:7px;cursor:pointer;}
+.bar-btn:hover{border-color:var(--accent);color:var(--accent);}
+.hidden-input{display:none;}
+
+/* PANEL */
+.panel{display:none;max-width:960px;margin:0 auto;}
+.panel.active{display:block;}
+
+/* LEGEND */
+.legend{display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.7rem;}
+.leg-item{display:flex;align-items:center;gap:.35rem;font-size:.58rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;}
+.leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+
+/* FERIE BUTTON */
+.ferie-btn{display:block;width:100%;padding:.7rem;border-radius:9px;background:var(--accent);border:none;color:var(--bg);font-family:'DM Mono',monospace;font-size:.82rem;font-weight:700;cursor:pointer;margin-bottom:.9rem;}
+.ferie-btn.active{background:var(--vacation);color:#fff;}
+
+/* SEL BAR */
+.sel-bar{display:none;background:rgba(232,125,109,.97);border-radius:10px;padding:.9rem 1.1rem;margin-bottom:.9rem;}
+.sel-bar.on{display:block;}
+.sel-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;}
+.sel-lbl{font-size:.78rem;color:#fff;font-weight:600;}
+.sel-cancel{background:none;border:none;color:rgba(255,255,255,.8);font-size:.72rem;cursor:pointer;font-family:'DM Mono',monospace;text-decoration:underline;}
+.sel-btns{display:none;gap:.5rem;}
+.sel-btns.on{display:flex;}
+.sel-btn{padding:.55rem 1rem;border-radius:7px;font-family:'DM Mono',monospace;font-size:.75rem;cursor:pointer;border:1px solid;font-weight:700;}
+.sel-me{background:#fff;border-color:#fff;color:var(--vacation);}
+.sel-sil{background:transparent;border-color:#fff;color:#fff;}
+
+/* CALENDAR */
+.wdays{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px;}
+.wday{text-align:center;font-size:.58rem;color:var(--muted);padding:.35rem 0;letter-spacing:.08em;text-transform:uppercase;}
+.dgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.day{border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:4px 2px 3px;cursor:pointer;border:1px solid transparent;height:52px;position:relative;}
+.day.empty{cursor:default;background:transparent!important;border:none!important;pointer-events:none;}
+.day.work{background:rgba(255,170,0,.18);border-color:rgba(255,170,0,.45);}
+.day.off{background:#222018;border-color:#3a3530;}
+.day.vac-me{background:rgba(74,158,255,.2);border-color:rgba(74,158,255,.55);}
+.day.vac-sil{background:rgba(167,139,250,.2);border-color:rgba(167,139,250,.55);}
+.day.adj-me{background:rgba(74,158,255,.06);border:1px dashed rgba(74,158,255,.3);}
+.day.adj-sil{background:rgba(167,139,250,.06);border:1px dashed rgba(167,139,250,.3);}
+.day.swapped{outline:2px solid rgba(167,139,250,.6);outline-offset:-2px;}
+.day.today{border-color:var(--today)!important;box-shadow:0 0 0 1px rgba(124,200,164,.2);}
+.day.sel-s{outline:3px solid #fff!important;outline-offset:-2px;background:rgba(232,125,109,.5)!important;}
+.day.sel-r{background:rgba(232,125,109,.3)!important;border-color:rgba(232,125,109,.7)!important;}
+.dn{font-size:.75rem;font-weight:700;width:100%;text-align:center;}
+.day.work .dn{color:var(--accent);}
+.day.off .dn{color:#c8bfaa;}
+.day.today .dn{color:var(--today);font-weight:800;}
+.day.vac-me .dn{color:var(--vac-me);}
+.day.vac-sil .dn{color:var(--vac-sil);}
+.day.adj-me .dn{color:rgba(74,158,255,.5);}
+.day.adj-sil .dn{color:rgba(167,139,250,.5);}
+.day.sel-s .dn,.day.sel-r .dn{color:#fff;}
+.di{font-size:.62rem;width:100%;text-align:center;}
+.day.work .di{color:var(--accent);}
+.day.swapped .di{color:var(--swap);}
+.day.adj-me .di,.day.adj-sil .di{opacity:.5;}
+.dname{font-size:.42rem;font-weight:800;letter-spacing:.02em;text-transform:uppercase;width:100%;text-align:center;}
+.day.vac-me .dname{color:var(--vac-me);}
+.day.vac-sil .dname{color:var(--vac-sil);}
+.day.adj-me .dname{color:rgba(74,158,255,.45);}
+.day.adj-sil .dname{color:rgba(167,139,250,.45);}
+.ndot{position:absolute;top:2px;right:3px;width:11px;height:11px;border-radius:50%;background:#ff3b30;}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:1rem;}
+@media(max-width:480px){.stats{grid-template-columns:repeat(2,1fr);}}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.7rem;text-align:center;}
+.sn{font-family:'Fraunces',serif;font-size:1.7rem;font-weight:800;color:var(--accent);line-height:1;}
+.sl{font-size:.54rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:.15rem;}
+.ss{font-size:.46rem;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin-top:.08rem;opacity:.7;}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:1.3rem;margin-bottom:1rem;}
+.card h3{font-family:'Fraunces',serif;font-size:1rem;font-weight:800;margin-bottom:.8rem;}
+.ilist{display:flex;flex-direction:column;gap:.4rem;margin-top:.5rem;}
+.item{display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:.55rem .9rem;}
+.item.swap-item{border-color:rgba(167,139,250,.3);}
+.item.note-item{border-color:rgba(245,200,66,.2);align-items:flex-start;}
+.item.bak-item{border-color:rgba(255,170,0,.2);align-items:flex-start;}
+.item.bak-prev{border-color:rgba(124,200,164,.25);}
+.im{font-size:.76rem;color:var(--text);font-weight:500;}
+.is{font-size:.62rem;color:var(--muted);margin-top:.1rem;}
+.ir{display:flex;align-items:center;gap:.7rem;}
+.ic{font-family:'Fraunces',serif;font-size:1rem;font-weight:700;color:var(--vacation);}
+.del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9rem;padding:.15rem;flex-shrink:0;}
+.rst{background:none;border:1px solid var(--accent);color:var(--accent);cursor:pointer;font-size:.6rem;padding:.25rem .55rem;border-radius:5px;font-family:'DM Mono',monospace;flex-shrink:0;}
+.empty{text-align:center;color:var(--muted);font-size:.72rem;padding:1rem 0;}
+.sec-lbl{font-size:.56rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin:.7rem 0 .35rem;padding-left:.15rem;}
+.bak-date{font-size:.68rem;color:var(--accent);font-weight:600;}
+.bak-prev .bak-date{color:var(--today);}
+.bak-info{font-size:.6rem;color:var(--muted);margin-top:.15rem;}
+
+/* VANTAGGIO */
+.vbar{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem;}
+.vcard{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:.9rem;text-align:center;}
+.vcard.me{border-color:rgba(74,158,255,.3);}
+.vcard.sil{border-color:rgba(167,139,250,.3);}
+.vname{font-size:.56rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem;}
+.vnum{font-family:'Fraunces',serif;font-size:1.8rem;font-weight:800;line-height:1;}
+.vcard.me .vnum{color:var(--vac-me);}
+.vcard.sil .vnum{color:var(--vac-sil);}
+.vsub{font-size:.54rem;color:var(--muted);margin-top:.25rem;}
+.vlbl{font-size:.58rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;text-align:center;margin-bottom:.7rem;}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);z-index:100;align-items:center;justify-content:center;}
+.overlay.on{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:1.6rem;width:min(390px,94vw);max-height:90vh;overflow-y:auto;}
+.modal-title{font-family:'Fraunces',serif;font-size:1.3rem;font-weight:800;margin-bottom:.15rem;}
+.modal-date{font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1.2rem;}
+.modal-sec{font-size:.58rem;color:var(--muted);letter-spacing:.09em;text-transform:uppercase;margin-bottom:.5rem;}
+.opts{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.1rem;}
+.opt{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.7rem .9rem;border-radius:9px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.76rem;text-align:left;}
+.opt.w{border-color:var(--accent);background:rgba(255,170,0,.1);color:var(--accent);}
+.opt.o{border-color:var(--muted);background:rgba(122,112,96,.1);}
+.opt.v{border-color:var(--vac-me);background:rgba(74,158,255,.1);color:var(--vac-me);}
+.opt.s{border-color:var(--swap);background:rgba(167,139,250,.1);color:var(--swap);}
+.note-ta{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'DM Mono',monospace;font-size:.76rem;padding:.7rem .9rem;resize:vertical;min-height:75px;margin-bottom:1.1rem;}
+.note-ta:focus{outline:none;border-color:#f5c842;}
+.note-ta::placeholder{color:var(--muted);}
+.mact{display:flex;gap:.6rem;justify-content:flex-end;}
+.btn{padding:.55rem 1.2rem;border-radius:7px;font-family:'DM Mono',monospace;font-size:.74rem;cursor:pointer;letter-spacing:.05em;border:1px solid;}
+.btn-p{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:700;}
+.btn-g{background:transparent;border-color:var(--border);color:var(--muted);}
+.reset-lnk{display:block;text-align:center;background:none;border:none;color:var(--muted);font-family:'DM Mono',monospace;font-size:.56rem;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;margin-top:.6rem;text-decoration:underline;}
+.note-date{font-size:.58rem;color:#f5c842;font-weight:700;}
+.note-text{font-size:.74rem;color:var(--text);margin-top:.25rem;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <div class="title">Turni</div>
+    <div class="subtitle">Calendario lavoro · Due soci ✓ · v26</div>
+  </div>
+  <div class="nav">
+    <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
+    <div class="month-lbl" id="monthLbl"></div>
+    <button class="nav-btn" onclick="changeMonth(1)">&#8594;</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" id="tab0" onclick="showTab(0)">📅 Calendario</button>
+  <button class="tab" id="tab1" onclick="showTab(1)">🌴 Ferie</button>
+  <button class="tab" id="tab2" onclick="showTab(2)">📝 Note</button>
+  <button class="tab" id="tab3" onclick="showTab(3)">💾 Backup</button>
+</div>
+
+<div class="sync" id="sync">⏳ Connessione...</div>
+
+<div class="bar">
+  <button class="bar-btn" onclick="esporta()">&#8595; Esporta dati</button>
+  <label class="bar-btn" for="impFile">&#8593; Importa dati</label>
+  <input class="hidden-input" type="file" id="impFile" accept=".json" onchange="importa(event)">
+  <label class="bar-btn" for="updFile">&#8635; Aggiorna software</label>
+  <input class="hidden-input" type="file" id="updFile" accept=".html" onchange="aggiorna(event)">
+</div>
+
+<!-- CALENDARIO -->
+<div class="panel active" id="panel0">
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:var(--accent)"></div>Mio turno</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#222018;border:1px solid #3a3530"></div>Libero</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--today)"></div>Oggi</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--vac-me)"></div>Ferie mie</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--vac-sil)"></div>Ferie Silvano</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--swap);border-radius:50%"></div>Cambio</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#ff3b30;border-radius:50%"></div>Nota</div>
+    <div class="leg-item"><div class="leg-dot" style="background:rgba(74,158,255,.1);border:1px dashed rgba(74,158,255,.4)"></div>Riposo adiac. mio</div>
+    <div class="leg-item"><div class="leg-dot" style="background:rgba(167,139,250,.1);border:1px dashed rgba(167,139,250,.4)"></div>Riposo adiac. Silvano</div>
+  </div>
+  <button class="ferie-btn" id="ferieBtn" onclick="toggleSel()">🌴 Segna ferie</button>
+  <div class="sel-bar" id="selBar">
+    <div class="sel-top">
+      <div class="sel-lbl" id="selLbl">Tocca il primo giorno</div>
+      <button class="sel-cancel" onclick="clearSel()">Annulla</button>
+    </div>
+    <input type="text" id="destInput" placeholder="Destinazione (opzionale, es. mare, montagna...)" style="display:none;width:100%;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:7px;color:#fff;font-family:'DM Mono',monospace;font-size:.75rem;padding:.5rem .7rem;margin-bottom:.5rem;" />
+    <div class="sel-btns" id="selBtns">
+      <button class="sel-btn sel-me" onclick="salvaFerie('me')">🌴 Ferie mie</button>
+      <button class="sel-btn sel-sil" onclick="salvaFerie('silvano')">🌴 Ferie Silvano</button>
+      <button class="sel-btn" style="background:transparent;border-color:rgba(255,255,255,.5);color:#fff;" onclick="ripristinaSelezionati()">↩ Ripristina</button>
+    </div>
+  </div>
+  <div class="wdays" id="wdays"></div>
+  <div class="dgrid" id="dgrid"></div>
+  <div class="stats" id="stats"></div>
+</div>
+
+<!-- FERIE -->
+<div class="panel" id="panel1">
+  <div class="vlbl">Ferie vantaggiose (l'altro lavorava di più)</div>
+  <div class="vbar">
+    <div class="vcard me"><div class="vname">Io</div><div class="vnum" id="vantMe">0</div><div class="vsub">vantaggiose</div></div>
+    <div class="vcard sil"><div class="vname">Silvano</div><div class="vnum" id="vantSil">0</div><div class="vsub">vantaggiose</div></div>
+  </div>
+  <div class="card"><h3 style="color:var(--vacation)">📋 Ferie registrate</h3><div id="vacList"><div class="empty">Nessuna ferie</div></div></div>
+  <div class="card"><h3 style="color:var(--swap)">🔄 Cambi turno</h3><div id="swapList"><div class="empty">Nessun cambio</div></div></div>
+</div>
+
+<!-- NOTE -->
+<div class="panel" id="panel2">
+  <div class="card"><h3 style="color:#f5c842">📝 Tutte le note</h3><div id="noteList"><div class="empty">Nessuna nota</div></div></div>
+</div>
+
+<!-- BACKUP -->
+<div class="panel" id="panel3">
+  <div class="card">
+    <h3 style="color:var(--accent)">💾 Backup</h3>
+    <p style="font-size:.65rem;color:var(--muted);margin-bottom:.8rem;">Ultimi 9 di oggi + 1 per giorno degli ultimi 30 giorni. Automatici ad ogni salvataggio.</p>
+    <div id="bakList"><div class="empty">Nessun backup</div></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="bgClose(event)">
+  <div class="modal">
+    <div class="modal-title" id="mTitle"></div>
+    <div class="modal-date" id="mDate"></div>
+    <div class="modal-sec">Stato giornata</div>
+    <div class="opts">
+      <button class="opt" id="oW" onclick="selOpt('work')">🟡 Il mio turno</button>
+      <button class="opt" id="oO" onclick="selOpt('off')">⚫ Giorno libero</button>
+      <button class="opt" id="oV" onclick="selOpt('vacation')">🌴 In ferie</button>
+      <button class="opt" id="oS" onclick="selOpt('swap')">🔄 Cambio turno</button>
+    </div>
+    <div class="modal-sec">📝 Nota</div>
+    <textarea class="note-ta" id="noteIn" placeholder="Scrivi una nota..."></textarea>
+    <div class="mact">
+      <button class="btn btn-g" onclick="closeModal()">Annulla</button>
+      <button class="btn btn-p" onclick="saveModal()">Salva</button>
+    </div>
+    <button class="reset-lnk" id="resetLnk" onclick="resetModal()">Ripristina originale</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────
+var FB = 'https://turni-lavoro-52db4-default-rtdb.europe-west1.firebasedatabase.app';
+var CYCLE = [true,true,false,true,false,true,true,false,false,true,false,true,false,false];
+var M = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+var DF = ['Domenica','Lunedi','Martedi','Mercoledi','Giovedi','Venerdi','Sabato'];
+
+// ── STATO ─────────────────────────────────────────────────────────────
+var NOW = new Date();
+var TODAY = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate());
+var cy = NOW.getFullYear(), cm = NOW.getMonth();
+var ov = {}, vac = [], sw = [], swd = [], nt = {}, uid = 1, ib = 13;
+var selMode = false, selStep = 0, selS = null, selE = null;
+var mKey = null, mOpt = null, fbOk = false;
+
+// ── UTILS ─────────────────────────────────────────────────────────────
+function dk(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function kd(k){ var p=k.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
+function addD(d,n){ var r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function tdStr(){ return dk(TODAY); }
+
+function isWork(d){
+  var dU=Date.UTC(d.getFullYear(),d.getMonth(),d.getDate());
+  var aU=Date.UTC(2026,2,8);
+  var diff=Math.round((dU-aU)/86400000);
+  var base=CYCLE[((diff%14)+14)%14];
+  var inv=0;
+  swd.forEach(function(s){
+    var sU=Date.UTC(s.date.getFullYear(),s.date.getMonth(),s.date.getDate());
+    if(sU<=dU) inv++;
+  });
+  return inv%2===0?base:!base;
+}
+
+function isVac(st){ return st==='vac-me'||st==='vac-sil'; }
+function getSt(d){ var k=dk(d); return ov[k]||(isWork(d)?'work':'off'); }
+function isSwap(k){ return sw.some(function(s){return s.d1===k;}); }
+
+function findBlocks(days){
+  if(!days.length) return [];
+  var sorted=days.slice().sort();
+  var blocks=[], cur=[sorted[0]];
+  for(var i=1;i<sorted.length;i++){
+    var prev=kd(sorted[i-1]), next=kd(sorted[i]);
+    if(Math.round((next.getTime()-prev.getTime())/86400000)<=1){ cur.push(sorted[i]); }
+    else { blocks.push(cur); cur=[sorted[i]]; }
+  }
+  blocks.push(cur);
+  return blocks;
+}
+
+function adjDays(){
+  var adj={};
+  var me=Object.keys(ov).filter(function(k){return ov[k]==='vac-me';});
+  var sil=Object.keys(ov).filter(function(k){return ov[k]==='vac-sil';});
+
+  function calc(vacDays, type){
+    if(!vacDays.length) return;
+    var set=new Set(vacDays);
+    // Chi copre: adj-sil=io copro (isWork=true), adj-me=Silvano copre (isWork=false)
+    function chiCoprelavora(d){ var st=getSt(d); return type==='adj-sil' ? st==='work' : st==='off'; }
+    // Espandi se chi copre lavora e il giorno non è ferie dell'altro tipo
+    function espandi(d){
+      var k=dk(d), st=getSt(d);
+      if(st==='vac-sil'||st==='vac-me') return false;
+      return chiCoprelavora(d);
+    }
+    var blocks=findBlocks(vacDays);
+    blocks.forEach(function(block){
+      var firstD=kd(block[0]), lastD=kd(block[block.length-1]);
+      var cur=new Date(firstD); cur.setDate(cur.getDate()-1);
+      while(true){
+        var k=dk(cur);
+        if(set.has(k)) break;
+        if(espandi(cur)){ adj[k]=type; cur.setDate(cur.getDate()-1); } else break;
+      }
+      cur=new Date(lastD); cur.setDate(cur.getDate()+1);
+      while(true){
+        var k=dk(cur);
+        if(set.has(k)) break;
+        if(espandi(cur)){ adj[k]=type; cur.setDate(cur.getDate()+1); } else break;
+      }
+    });
+  }
+
+  calc(me,'adj-me');
+  calc(sil,'adj-sil');
+  return adj;
+}
+
+function yearlyCov(){
+  var ys=String(cy)+'-';
+  var vm=0,vs=0,vmc=0,vsc=0;
+  Object.keys(ov).forEach(function(k){
+    if(k.indexOf(ys)!==0) return;
+    if(ov[k]==='vac-me') vm++;
+    else if(ov[k]==='vac-sil') vs++;
+  });
+  var adj=adjDays();
+  Object.keys(adj).forEach(function(k){
+    if(k.indexOf(ys)!==0) return;
+    if(adj[k]==='adj-me') vmc++;
+    else if(adj[k]==='adj-sil') vsc++;
+  });
+  return {vm:vm,vs:vs,vmc:vm+vmc,vsc:vs+vsc};
+}
+
+function yearlyWorked(){
+  var start=new Date(cy,0,1);
+  var end=new Date(TODAY);
+  var wm=0,ws=0;
+  var cur=new Date(start);
+  while(cur<=end){
+    var st=getSt(cur);
+    if(st==='work') wm++;
+    if(st==='vac-me'){} // io non lavoro
+    if(st==='off'){} // io non lavoro
+    if(st==='vac-sil'){} // silvano non lavora
+    if(st==='work') {} // già contato sopra per me
+    // Silvano lavora quando st==='off' (io riposo) o st==='vac-me' (io in ferie, lui copre)
+    if(st==='off'||st==='vac-me') ws++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return {wm:wm,ws:ws};
+}
+
+function nonWorkedUpTo(endDate){
+  var keys=Object.keys(ov);
+  if(!keys.length) return {vm:0,vs:0};
+  var minKey=keys.slice().sort()[0];
+  var cur=new Date(kd(minKey).getFullYear(),0,1);
+  var end=new Date(endDate);
+  var nm=0,ns=0;
+  while(cur<=end){
+    var st=getSt(cur);
+    if(st==='off'||st==='vac-me') nm++;
+    if(st==='work'||st==='vac-sil') ns++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return {vm:nm,vs:ns};
+}
+
+function restBalance(){
+  var totNow=nonWorkedUpTo(TODAY);
+  var diffNow=(totNow.vs-totNow.vm)+ib; // positivo = Silvano ha più riposo; +ib saldo pre-tracciamento
+  var lastDayPrevYear=new Date(cy-1,11,31);
+  var totPrev=nonWorkedUpTo(lastDayPrevYear);
+  var diffPrev=(totPrev.vs-totPrev.vm)+ib;
+  var diffThisYear=diffNow-diffPrev;
+  return {diffNow:diffNow,diffPrev:diffPrev,diffThisYear:diffThisYear};
+}
+
+// ── FIREBASE ──────────────────────────────────────────────────────────
+function fbGet(p){ return fetch(FB+p+'.json').then(function(r){return r.json();}); }
+function fbSet(p,d){ return fetch(FB+p+'.json',{method:'PUT',body:JSON.stringify(d)}).then(function(r){return r.json();}); }
+
+function payload(){
+  return {
+    overrides:ov,
+    vacations:vac.map(function(v){return {id:v.id,who:v.who,from:v.from.toISOString(),to:v.to.toISOString(),workDays:v.workDays,days:v.days,dest:v.dest||''};}),
+    swaps:sw, swapDates:swd.map(function(s){return {id:s.id,date:s.date.toISOString()};}),
+    notes:nt, uid:uid, ib:ib
+  };
+}
+
+function apply(data){
+  ov=data.overrides||{}; uid=data.uid||1; ib=(typeof data.ib==='number')?data.ib:13;
+  vac=(data.vacations||[]).map(function(v){return {id:v.id,who:v.who,from:new Date(v.from),to:new Date(v.to),workDays:v.workDays,days:v.days,dest:v.dest||''};});
+  sw=data.swaps||[];
+  swd=(data.swapDates||[]).map(function(s){return {id:s.id,date:new Date(s.date)};});
+  nt=data.notes||{};
+}
+
+function setSync(msg,cls){
+  var el=document.getElementById('sync');
+  el.textContent=msg; el.className='sync'+(cls?' '+cls:'');
+}
+
+function saveFB(){
+  if(!fbOk) return;
+  var p=payload(), now=Date.now(), ts=tdStr();
+  // Protezione: non salvare se i dati sembrano vuoti
+  var hasData=Object.keys(p.overrides||{}).length>0||
+              (p.vacations&&p.vacations.length>0)||
+              Object.keys(p.notes||{}).length>0;
+  fbGet('/backups').then(function(ex){
+    var map=ex||{};
+    var list=Object.entries(map).map(function(e){
+      return {key:e[0],ts:e[1].ts,label:e[1].label,dayStr:e[1].dayStr,data:e[1].data};
+    });
+    // Backup di oggi: tieni ultimi 9
+    var td=list.filter(function(b){return b.dayStr===ts;})
+              .sort(function(a,b){return b.ts-a.ts;}).slice(0,8);
+    // Backup giorni precedenti: tieni 1 per giorno per gli ultimi 30 giorni
+    var prevMap={};
+    list.filter(function(b){return b.dayStr!==ts;})
+        .sort(function(a,b){return b.ts-a.ts;})
+        .forEach(function(b){
+          if(!prevMap[b.dayStr]) prevMap[b.dayStr]=b; // tieni solo il più recente per ogni giorno
+        });
+    // Tieni solo i 30 giorni più recenti
+    var prevDays=Object.keys(prevMap).sort().reverse().slice(0,30);
+    var nm={};
+    nm['b'+now]={ts:now,label:new Date().toLocaleString('it-IT'),dayStr:ts,data:p};
+    td.forEach(function(b){nm[b.key]=b;});
+    prevDays.forEach(function(d){nm[prevMap[d].key]=prevMap[d];});
+    fbSet('/backups',nm).then(function(){
+      fbSet('/dati',p).then(function(){
+        setSync('✓ Sincronizzato · '+new Date().toLocaleTimeString('it-IT'),'ok');
+        localStorage.setItem('turni_v1',JSON.stringify(p));
+      }).catch(function(){ setSync('⚠️ Errore salvataggio — dati locali al sicuro','err'); });
+    }).catch(function(){ setSync('⚠️ Errore backup — riprovo...','err'); });
+  }).catch(function(){
+    // Anche senza backup, salva i dati principali
+    fbSet('/dati',p).then(function(){
+      setSync('✓ Sincronizzato (backup non disponibile) · '+new Date().toLocaleTimeString('it-IT'),'ok');
+      localStorage.setItem('turni_v1',JSON.stringify(p));
+    }).catch(function(){ setSync('⚠️ Firebase non raggiungibile — dati salvati solo in locale!','err'); });
+  });
+}
+
+function loadFB(){
+  setSync('⏳ Caricamento...','');
+  fbGet('/dati').then(function(data){
+    if(data && Object.keys(data).length>0){
+      // Protezione: non sovrascrivere dati locali con dati vuoti da Firebase
+      var fbHasData=Object.keys(data.overrides||{}).length>0||
+                    (data.vacations&&data.vacations.length>0);
+      var localRaw=localStorage.getItem('turni_v1');
+      var localData=localRaw?JSON.parse(localRaw):null;
+      var localHasData=localData&&(Object.keys(localData.overrides||{}).length>0||
+                       (localData.vacations&&localData.vacations.length>0));
+      if(!fbHasData && localHasData){
+        // Firebase vuoto ma locale ha dati: usa locale e carica su Firebase
+        setSync('⚠️ Firebase vuoto — ripristino da locale...','err');
+        loadLS(); fbOk=true; render();
+        setTimeout(function(){ saveFB(); },1000);
+        return;
+      }
+      apply(data);
+      localStorage.setItem('turni_v1',JSON.stringify(data));
+      fbOk=true;
+      setSync('✓ Dati caricati · '+new Date().toLocaleTimeString('it-IT'),'ok');
+    } else {
+      loadLS(); fbOk=true;
+      setSync('✓ Connesso (nessun dato su Firebase)','ok');
+      if(Object.keys(ov).length>0) saveFB(); // carica i dati locali su Firebase
+    }
+    render();
+  }).catch(function(){
+    setSync('⚠️ Firebase non raggiungibile — lavoro in modalità offline','err');
+    loadLS(); render();
+    // Riprova ogni 30 secondi
+    setTimeout(function(){ if(!fbOk) loadFB(); },30000);
+  });
+}
+
+function loadLS(){
+  try{ var r=localStorage.getItem('turni_v1'); if(r) apply(JSON.parse(r)); }catch(e){}
+}
+
+// ── BACKUP LIST ───────────────────────────────────────────────────────
+function renderBak(){
+  var el=document.getElementById('bakList');
+  fbGet('/backups').then(function(data){
+    if(!data){el.innerHTML='<div class="empty">Nessun backup</div>';return;}
+    var list=Object.entries(data).map(function(e){return {key:e[0],ts:e[1].ts,label:e[1].label,dayStr:e[1].dayStr,data:e[1].data};});
+    list.sort(function(a,b){return b.ts-a.ts;});
+    if(!list.length){el.innerHTML='<div class="empty">Nessun backup</div>';return;}
+    var ts=tdStr();
+    var td=list.filter(function(b){return b.dayStr===ts;});
+    var pv=list.filter(function(b){return b.dayStr!==ts;});
+    var h='';
+    if(td.length){
+      h+='<div class="sec-lbl">📅 Oggi</div><div class="ilist">';
+      td.forEach(function(b,i){
+        var vc=Object.values(b.data.overrides||{}).filter(function(v){return v==='vac-me'||v==='vac-sil';}).length;
+        var nc=Object.keys(b.data.notes||{}).length;
+        h+='<div class="item bak-item"><div style="flex:1"><div class="bak-date">'+(i===0?'⭐ ':'')+b.label+'</div><div class="bak-info">'+vc+' ferie · '+nc+' note</div></div><button class="rst" onclick="restBak(\''+b.key+'\')">Ripristina</button></div>';
+      });
+      h+='</div>';
+    }
+    if(pv.length){
+      h+='<div class="sec-lbl">📆 Precedente</div><div class="ilist">';
+      pv.forEach(function(b){
+        var vc=Object.values(b.data.overrides||{}).filter(function(v){return v==='vac-me'||v==='vac-sil';}).length;
+        var nc=Object.keys(b.data.notes||{}).length;
+        h+='<div class="item bak-item bak-prev"><div style="flex:1"><div class="bak-date">'+b.label+'</div><div class="bak-info">'+vc+' ferie · '+nc+' note</div></div><button class="rst" onclick="restBak(\''+b.key+'\')">Ripristina</button></div>';
+      });
+      h+='</div>';
+    }
+    el.innerHTML=h;
+  }).catch(function(){el.innerHTML='<div class="empty">Errore caricamento</div>';});
+}
+
+function restBak(key){
+  if(!confirm('Ripristinare questo backup?')) return;
+  fbGet('/backups').then(function(data){
+    var b=data[key]; if(!b){alert('Non trovato');return;}
+    apply(b.data); render(); saveFB(); showTab(0); alert('Ripristinato!');
+  });
+}
+
+// ── UI ────────────────────────────────────────────────────────────────
+function showTab(n){
+  for(var i=0;i<4;i++){
+    document.getElementById('tab'+i).classList.toggle('active',i===n);
+    document.getElementById('panel'+i).classList.toggle('active',i===n);
+  }
+  if(n===1){renderVac();renderSwap();}
+  if(n===2){renderNotes();}
+  if(n===3){renderBak();}
+}
+
+function changeMonth(d){
+  cm+=d;
+  if(cm>11){cm=0;cy++;}
+  if(cm<0){cm=11;cy--;}
+  render();
+}
+
+function render(){
+  document.getElementById('monthLbl').textContent=M[cm]+' '+cy;
+  document.getElementById('wdays').innerHTML=['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(function(d){return '<div class="wday">'+d+'</div>';}).join('');
+  var grid=document.getElementById('dgrid');
+  grid.innerHTML='';
+  var first=new Date(cy,cm,1), last=new Date(cy,cm+1,0);
+  var pad=first.getDay()-1; if(pad<0) pad=6;
+  for(var i=0;i<pad;i++){var e=document.createElement('div');e.className='day empty';grid.appendChild(e);}
+
+  var adj=adjDays();
+  var wc=0,oc=0,sc=0;
+
+  for(var d=1;d<=last.getDate();d++){
+    var date=new Date(cy,cm,d), k=dk(date);
+    var st=getSt(date), isTd=date.toDateString()===TODAY.toDateString();
+    var isSw=isSwap(k), hasN=!!(nt[k]&&nt[k].trim()), adjT=adj[k];
+    if(st==='work') wc++;
+    else if(!isVac(st)&&!adjT) oc++;
+    if(isSw) sc++;
+
+    var cls='day';
+    if(st==='vac-me') cls+=' vac-me';
+    else if(st==='vac-sil') cls+=' vac-sil';
+    else if(adjT) cls+=' '+adjT;
+    else if(st==='work') cls+=' work';
+    else cls+=' off';
+    if(isSw) cls+=' swapped';
+    if(isTd) cls+=' today';
+
+    var icon=isVac(st)?'&#127796;':isSw?'&#8644;':st==='work'?'L':'';
+    var name=st==='vac-me'?'Io':st==='vac-sil'?'Silvano':'';
+    if(adjT&&!isVac(st)){icon='·';name=adjT==='adj-me'?'Io':'Sil';}
+
+    var div=document.createElement('div');
+    div.className=cls; div.setAttribute('data-key',k);
+    div.innerHTML=(hasN?'<span class="ndot"></span>':'')+'<span class="dn">'+d+'</span><span class="di">'+icon+'</span><span class="dname">'+name+'</span>';
+    div.onclick=function(){handleClick(this.getAttribute('data-key'));};
+    grid.appendChild(div);
+  }
+  if(selMode) hilite();
+
+  var cov=yearlyCov();
+  var bal=restBalance();
+  var wk=yearlyWorked();
+  var chiVince=bal.diffNow>=0?'Silvano':'Io';
+  var chiColor=bal.diffNow>=0?'var(--vac-sil)':'var(--vac-me)';
+  var absNow=Math.abs(bal.diffNow);
+  var absThis=Math.abs(bal.diffThisYear);
+  var absPrev=Math.abs(bal.diffPrev);
+  document.getElementById('stats').innerHTML=
+    '<div class="stat"><div class="sn" style="color:var(--swap)">'+sc+'</div><div class="sl">Cambi turno</div><div class="ss">questo mese</div></div>'+
+    '<div class="stat"><div class="sn" style="color:var(--vac-me)">'+cov.vm+'</div><div class="sl">Ferie mie</div><div class="ss">totale '+cy+'</div></div>'+
+    '<div class="stat"><div class="sn" style="color:var(--vac-sil)">'+cov.vs+'</div><div class="sl">Ferie Silvano</div><div class="ss">totale '+cy+'</div></div>'+
+    '<div class="stat"><div class="sn" style="color:var(--today)">'+cov.vsc+'</div><div class="sl">Giorni coperti a Silvano</div><div class="ss">gg lavorativi continuativi</div></div>'+
+    '<div class="stat"><div class="sn" style="color:#c4b5fd">'+cov.vmc+'</div><div class="sl">Giorni coperti a me</div><div class="ss">gg lavorativi continuativi</div></div>'+
+    '<div class="stat"><div class="sn" style="color:var(--accent)">'+wk.wm+'</div><div class="sl">Giorni lavorati miei</div><div class="ss">totale '+cy+'</div></div>'+
+    '<div class="stat"><div class="sn" style="color:var(--accent)">'+wk.ws+'</div><div class="sl">Giorni lavorati Silvano</div><div class="ss">totale '+cy+'</div></div>'+
+    '<div class="stat" style="grid-column:1/-1;padding:1rem;"><div class="sn" style="color:'+chiColor+';font-size:2.2rem;">'+chiVince+' +'+absNow+'</div><div class="sl">giorni di riposo in più (saldo totale)</div><div class="ss">di cui '+absPrev+' da anni precedenti · '+absThis+' quest\'anno</div><div style="margin-top:.6rem;"><button class="reset-lnk" onclick="modificaSaldoIniziale()" style="margin-top:0;">✏️ Modifica saldo pre-tracciamento ('+ib+')</button></div></div>';
+}
+
+function modificaSaldoIniziale(){
+  var val=prompt('Saldo iniziale (giorni extra prima di iniziare a tracciare).\nPositivo = Silvano ha più giorni di riposo.\nNegativo = io ho più giorni di riposo.', ib);
+  if(val===null) return;
+  var n=parseInt(val,10);
+  if(isNaN(n)){ alert('Inserisci un numero valido'); return; }
+  ib=n; render(); saveFB();
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────
+function handleClick(k){ if(selMode){handleSel(k);return;} openModal(k); }
+
+function openModal(k){
+  mKey=k; var d=kd(k), st=getSt(d);
+  if(isSwap(k)) mOpt='swap';
+  else if(isVac(st)) mOpt='vacation';
+  else mOpt=st;
+  document.getElementById('mTitle').textContent=DF[d.getDay()]+' '+d.getDate();
+  document.getElementById('mDate').textContent=d.getDate()+' '+M[d.getMonth()]+' '+d.getFullYear();
+  document.getElementById('resetLnk').style.display=(ov[k]||isSwap(k))?'block':'none';
+  document.getElementById('noteIn').value=nt[k]||'';
+  updOpts();
+  document.getElementById('overlay').classList.add('on');
+}
+
+function closeModal(){ document.getElementById('overlay').classList.remove('on'); mKey=null; mOpt=null; }
+function bgClose(e){ if(e.target.id==='overlay') closeModal(); }
+function selOpt(o){ mOpt=o; updOpts(); }
+
+function updOpts(){
+  document.getElementById('oW').className='opt'+(mOpt==='work'?' w':'');
+  document.getElementById('oO').className='opt'+(mOpt==='off'?' o':'');
+  document.getElementById('oV').className='opt'+(mOpt==='vacation'?' v':'');
+  document.getElementById('oS').className='opt'+(mOpt==='swap'?' s':'');
+}
+
+function saveModal(){
+  if(!mKey) return;
+  var k=mKey;
+  var nv=document.getElementById('noteIn').value.trim();
+  if(nv) nt[k]=nv; else delete nt[k];
+  var exSw=sw.find(function(s){return s.d1===k;});
+  if(exSw&&mOpt!=='swap'){
+    swd=swd.filter(function(s){return s.id!==exSw.id;});
+    sw=sw.filter(function(s){return s.id!==exSw.id;});
+  }
+  if(mOpt==='swap'){
+    if(!exSw){
+      var d=kd(k); var id=uid++;
+      swd.push({date:new Date(d.getTime()),id:id});
+      sw.push({id:id,d1:k,l1:DF[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1)});
+    }
+    delete ov[k];
+  } else if(mOpt==='vacation'){
+    ov[k]='vac-me';
+  } else {
+    ov[k]=mOpt;
+  }
+  closeModal(); render(); saveFB();
+}
+
+function resetModal(){
+  if(!mKey) return;
+  var k=mKey; delete ov[k];
+  var exSw=sw.find(function(s){return s.d1===k;});
+  if(exSw){ swd=swd.filter(function(s){return s.id!==exSw.id;}); sw=sw.filter(function(s){return s.id!==exSw.id;}); }
+  closeModal(); render(); saveFB();
+}
+
+// ── SELEZIONE FERIE ───────────────────────────────────────────────────
+function toggleSel(){
+  if(selMode){clearSel();return;}
+  selMode=true; selStep=1; selS=null; selE=null;
+  document.getElementById('selBar').classList.add('on');
+  document.getElementById('selBtns').style.display='none';
+  document.getElementById('destInput').style.display='none';
+  document.getElementById('destInput').value='';
+  document.getElementById('selLbl').textContent='Tocca il primo giorno';
+  var btn=document.getElementById('ferieBtn');
+  btn.textContent='Annulla'; btn.classList.add('active');
+}
+
+function clearSel(){
+  selMode=false; selStep=0; selS=null; selE=null;
+  document.getElementById('selBar').classList.remove('on');
+  document.getElementById('selBtns').style.display='none';
+  document.getElementById('destInput').style.display='none';
+  document.getElementById('destInput').value='';
+  var btn=document.getElementById('ferieBtn');
+  btn.textContent='🌴 Segna ferie'; btn.classList.remove('active');
+  hilite();
+}
+
+function handleSel(k){
+  var date=kd(k);
+  if(selStep===1){ selS=date; selStep=2; document.getElementById('selLbl').textContent='Ora tocca l\'ultimo giorno'; hilite(); }
+  else if(selStep===2){
+    selE=date;
+    if(selE<selS){var t=selS;selS=selE;selE=t;}
+    selStep=3;
+    var n=Math.round((Date.UTC(selE.getFullYear(),selE.getMonth(),selE.getDate())-Date.UTC(selS.getFullYear(),selS.getMonth(),selS.getDate()))/86400000)+1;
+    document.getElementById('selLbl').textContent=n+' giorn'+(n===1?'o':'i')+' selezionat'+(n===1?'o':'i');
+    document.getElementById('selBtns').style.display='flex';
+    document.getElementById('destInput').style.display='block';
+    hilite();
+  } else {
+    selS=date; selE=null; selStep=2;
+    document.getElementById('selLbl').textContent='Ora tocca l\'ultimo giorno';
+    document.getElementById('selBtns').style.display='none';
+    document.getElementById('destInput').style.display='none';
+    hilite();
+  }
+}
+
+function hilite(){
+  document.querySelectorAll('.day.sel-s,.day.sel-r').forEach(function(el){el.classList.remove('sel-s','sel-r');});
+  if(!selS) return;
+  var end=selE||selS, cur=new Date(selS);
+  while(cur<=end){
+    var el=document.querySelector('[data-key="'+dk(cur)+'"]');
+    if(el) el.classList.add(cur.getTime()===selS.getTime()||cur.getTime()===end.getTime()?'sel-s':'sel-r');
+    cur.setDate(cur.getDate()+1);
+  }
+}
+
+function ripristinaSelezionati(){
+  if(!selS) return;
+  var from=new Date(selS), to=selE?new Date(selE):new Date(selS);
+  var cur=new Date(from);
+  while(cur<=to){
+    var k=dk(cur);
+    // Rimuovi override e rimuovi dalle vacations
+    delete ov[k];
+    vac=vac.filter(function(v){
+      v.days=v.days.filter(function(d){return d!==k;});
+      return v.days.length>0;
+    });
+    cur.setDate(cur.getDate()+1);
+  }
+  clearSel(); render(); saveFB();
+}
+
+function salvaFerie(chi){
+  if(!selS) return;
+  var from=new Date(selS), to=selE?new Date(selE):new Date(selS);
+  var days=[], cur=new Date(from);
+  while(cur<=to){days.push(dk(cur));cur.setDate(cur.getDate()+1);}
+  var st=chi==='me'?'vac-me':'vac-sil';
+  days.forEach(function(k){ov[k]=st;});
+  var dest=document.getElementById('destInput').value.trim();
+  vac.push({id:uid++,who:chi==='me'?'Io':'Silvano',from:from,to:to,workDays:days.length,days:days,dest:dest});
+  clearSel(); render(); saveFB(); showTab(1);
+}
+
+// ── FERIE LIST ────────────────────────────────────────────────────────
+function analizza(who, days){
+  var inv=(who==='silvano'), cL=0, aL=0;
+  days.forEach(function(k){
+    var p=k.split('-').map(Number), d=new Date(p[0],p[1]-1,p[2]);
+    var dU=Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()), aU=Date.UTC(2026,2,8);
+    var diff=Math.round((dU-aU)/86400000), base=CYCLE[((diff%14)+14)%14];
+    if(inv?!base:base) cL++; if(inv?base:!base) aL++;
+  });
+  return {vant:aL>cL};
+}
+
+function updVant(){
+  var tm=0, ts=0;
+  vac.forEach(function(v){
+    var r=analizza(v.who==='Io'?'me':'silvano',v.days);
+    if(r.vant){if(v.who==='Io')tm++;else ts++;}
+  });
+  document.getElementById('vantMe').textContent=tm;
+  document.getElementById('vantSil').textContent=ts;
+}
+
+function renderVac(){
+  var el=document.getElementById('vacList'); updVant();
+  if(!vac.length){el.innerHTML='<div class="empty">Nessuna ferie</div>';return;}
+  el.innerHTML='<div class="ilist">'+vac.map(function(v){
+    var r=analizza(v.who==='Io'?'me':'silvano',v.days);
+    var b=r.vant?'<span style="font-size:.56rem;color:var(--accent);margin-left:.4rem;">↑ vantaggio</span>':'';
+    var destHtml=v.dest?('<div style="font-size:.62rem;color:var(--accent);margin-top:.15rem;cursor:pointer;" onclick="modificaDestinazione('+v.id+')">📍 '+v.dest.replace(/</g,'&lt;').replace(/>/g,'&gt;')+' ✏️</div>'):('<div style="font-size:.6rem;color:var(--muted);margin-top:.15rem;cursor:pointer;text-decoration:underline;" onclick="modificaDestinazione('+v.id+')">+ aggiungi destinazione</div>');
+    return '<div class="item"><div><div class="im">'+v.who+b+'</div><div class="is">'+v.from.getDate()+' '+M[v.from.getMonth()]+' → '+v.to.getDate()+' '+M[v.to.getMonth()]+' '+v.to.getFullYear()+'</div>'+destHtml+'</div><div class="ir"><div class="ic">'+v.workDays+'gg</div><button class="del" onclick="delVac('+v.id+')">✕</button></div></div>';
+  }).join('')+'</div>';
+}
+
+function modificaDestinazione(id){
+  var v=vac.find(function(x){return x.id===id;});
+  if(!v) return;
+  var val=prompt('Destinazione per queste ferie:', v.dest||'');
+  if(val===null) return;
+  v.dest=val.trim();
+  renderVac(); saveFB();
+}
+
+function delVac(id){
+  var v=vac.find(function(x){return x.id===id;}); if(!v)return;
+  v.days.forEach(function(k){if(ov[k]==='vac-me'||ov[k]==='vac-sil')delete ov[k];});
+  vac=vac.filter(function(x){return x.id!==id;});
+  renderVac(); render(); saveFB();
+}
+
+function renderSwap(){
+  var el=document.getElementById('swapList');
+  if(!sw.length){el.innerHTML='<div class="empty">Nessun cambio</div>';return;}
+  el.innerHTML='<div class="ilist">'+sw.map(function(s){
+    return '<div class="item swap-item"><div><div class="im" style="color:var(--swap)">Dal '+s.l1+' in poi</div><div class="is">Turni invertiti</div></div><button class="del" onclick="delSwap('+s.id+')">✕</button></div>';
+  }).join('')+'</div>';
+}
+
+function delSwap(id){
+  swd=swd.filter(function(s){return s.id!==id;});
+  sw=sw.filter(function(s){return s.id!==id;});
+  renderSwap(); render(); saveFB();
+}
+
+function renderNotes(){
+  var el=document.getElementById('noteList');
+  var keys=Object.keys(nt).filter(function(k){return nt[k]&&nt[k].trim();}).sort();
+  if(!keys.length){el.innerHTML='<div class="empty">Nessuna nota</div>';return;}
+  el.innerHTML='<div class="ilist">'+keys.map(function(k){
+    var d=kd(k);
+    var lbl=DF[d.getDay()]+' '+d.getDate()+' '+M[d.getMonth()]+' '+d.getFullYear();
+    return '<div class="item note-item"><div style="flex:1"><div class="note-date">'+lbl+'</div><div class="note-text">'+nt[k].replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div></div><button class="del" onclick="delNote(\''+k+'\')">✕</button></div>';
+  }).join('')+'</div>';
+}
+
+function delNote(k){ delete nt[k]; renderNotes(); render(); saveFB(); }
+
+// ── ESPORTA / IMPORTA / AGGIORNA ─────────────────────────────────────
+function esporta(){
+  try{
+    var blob=new Blob([JSON.stringify(payload(),null,2)],{type:'application/json'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download='turni_dati.json'; a.click();
+    URL.revokeObjectURL(url);
+  }catch(e){alert('Errore: '+e.message);}
+}
+
+function importa(event){
+  var file=event.target.files[0]; if(!file)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    try{ apply(JSON.parse(e.target.result)); render(); saveFB(); alert('Importato!'); }
+    catch(err){alert('Errore: '+err.message);}
+  };
+  r.readAsText(file); event.target.value='';
+}
+
+function aggiorna(event){
+  var file=event.target.files[0]; if(!file)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    try{
+      localStorage.setItem('turni_v1',JSON.stringify(payload()));
+      var blob=new Blob([e.target.result],{type:'text/html'});
+      window.location.href=URL.createObjectURL(blob);
+    }catch(err){alert('Errore: '+err.message);}
+  };
+  r.readAsText(file); event.target.value='';
+}
+
+// ── AVVIO ─────────────────────────────────────────────────────────────
+loadLS(); render(); loadFB();
+</script>
+</body>
+</html>
