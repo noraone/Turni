@@ -168,7 +168,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 <div class="hdr">
   <div>
     <div class="title">Turni</div>
-    <div class="subtitle">Calendario lavoro · Due soci ✓ · v27</div>
+    <div class="subtitle">Calendario lavoro · Due soci ✓ · v28</div>
   </div>
   <div class="nav">
     <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
@@ -278,6 +278,128 @@ var FB = 'https://turni-lavoro-52db4-default-rtdb.europe-west1.firebasedatabase.
 var CYCLE = [true,true,false,true,false,true,true,false,false,true,false,true,false,false];
 var M = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 var DF = ['Domenica','Lunedi','Martedi','Mercoledi','Giovedi','Venerdi','Sabato'];
+
+// ── ACCESSO CON EMAIL E PASSWORD (Firebase Authentication, senza librerie) ──
+// La password non viene mai salvata: sul dispositivo resta solo un gettone di accesso.
+// PROVA = pagina di prova (prova.html): usa dati e memoria separati da quelli veri.
+var PROVA = /\/prova(\.html)?$/.test(location.pathname);
+if (PROVA) { (function(){
+  var g = Storage.prototype.getItem, s = Storage.prototype.setItem, r = Storage.prototype.removeItem;
+  function k(x){ x = String(x); return x.indexOf('_auth_v1') > 0 ? x : 'prova_' + x; }
+  Storage.prototype.getItem = function(x){ return g.call(this, k(x)); };
+  Storage.prototype.setItem = function(x, v){ return s.call(this, k(x), v); };
+  Storage.prototype.removeItem = function(x){ return r.call(this, k(x)); };
+})(); }
+var AUTH_KEY = 'AIzaSyAm0jgdQIywVWdEQTc4gSUia6rd8oiB8xs';      // chiave API web del progetto (pubblica, non è una password)
+var AUTH_UID = 'K3e42BEq1jThLbiNgUdmHyyzdGn2';      // unico utente autorizzato
+var AUTH_STORE = 'turni_auth_v1';
+var AUTH_ACCENT = '#ffaa00';
+var _authRefreshing = null;
+
+function authLoad(){ try { return JSON.parse(localStorage.getItem(AUTH_STORE) || 'null'); } catch(e){ return null; } }
+function authSave(s){ try { localStorage.setItem(AUTH_STORE, JSON.stringify(s)); } catch(e){} }
+function authClear(){ try { localStorage.removeItem(AUTH_STORE); } catch(e){} }
+function authHasSession(){ var s = authLoad(); return !!(s && s.refreshToken); }
+
+function authLogin(email, password){
+  return fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + AUTH_KEY, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, password: password, returnSecureToken: true })
+  }).then(function(r){
+    return r.json().then(function(j){
+      if (!r.ok) { var e = new Error((j && j.error && j.error.message) || ('HTTP ' + r.status)); e.api = true; throw e; }
+      return j;
+    });
+  }).then(function(j){
+    if (j.localId !== AUTH_UID) { var e = new Error('UTENTE_NON_AUTORIZZATO'); e.api = true; throw e; }
+    authSave({ refreshToken: j.refreshToken, idToken: j.idToken, exp: Date.now() + (parseInt(j.expiresIn, 10) || 3600) * 1000, uid: j.localId });
+    return true;
+  });
+}
+
+// Restituisce un gettone valido (lo rinnova da solo quando sta per scadere), oppure null.
+function authToken(){
+  var s = authLoad();
+  if (!s || !s.refreshToken) return Promise.resolve(null);
+  if (s.idToken && s.exp - Date.now() > 5 * 60 * 1000) return Promise.resolve(s.idToken);
+  if (_authRefreshing) return _authRefreshing;
+  function ancoraBuono(){ return (s.idToken && s.exp > Date.now()) ? s.idToken : null; }
+  _authRefreshing = fetch('https://securetoken.googleapis.com/v1/token?key=' + AUTH_KEY, {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(s.refreshToken)
+  }).then(function(r){
+    return r.json().then(function(j){ return { ok: r.ok, j: j || {} }; });
+  }).then(function(x){
+    _authRefreshing = null;
+    if (x.ok && x.j.id_token) {
+      authSave({ refreshToken: x.j.refresh_token || s.refreshToken, idToken: x.j.id_token, exp: Date.now() + (parseInt(x.j.expires_in, 10) || 3600) * 1000, uid: x.j.user_id || s.uid });
+      return x.j.id_token;
+    }
+    var m = (x.j.error && x.j.error.message) || '';
+    if (/TOKEN_EXPIRED|USER_DISABLED|USER_NOT_FOUND|INVALID_REFRESH_TOKEN|MISSING_REFRESH_TOKEN|INVALID_GRANT/.test(m)) {
+      authClear(); authShow('Accesso scaduto: inserisci di nuovo email e password.'); return null;
+    }
+    return ancoraBuono();
+  }).catch(function(){ _authRefreshing = null; return ancoraBuono(); });
+  return _authRefreshing;
+}
+
+function authDenied(){ authClear(); authShow('Accesso non valido: inserisci di nuovo email e password.'); }
+
+function authShow(msg){
+  var bg = document.getElementById('authBg');
+  if (!bg) {
+    var css = 'width:100%;box-sizing:border-box;padding:12px;margin-bottom:10px;background:#0f0e0c;border:1px solid #3a3530;border-radius:9px;color:#f0ead8;font-family:inherit;font-size:16px;outline:none;';
+    document.body.insertAdjacentHTML('beforeend',
+      '<div id="authBg" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483000;background:#0f0e0c;align-items:center;justify-content:center;padding:20px;">' +
+      '<form id="authForm" onsubmit="return authSubmit(event)" style="width:100%;max-width:360px;box-sizing:border-box;background:#1a1814;border:1px solid #2e2a22;border-radius:14px;padding:22px;color:#f0ead8;font-family:inherit;">' +
+      '<div style="font-size:22px;font-weight:800;color:' + AUTH_ACCENT + ';margin-bottom:4px;">Accesso</div>' +
+      '<div style="font-size:12px;color:#9a917e;margin-bottom:16px;line-height:1.4;">Email e password vengono chieste una sola volta su questo dispositivo.</div>' +
+      '<input id="authEmail" type="email" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Email" required style="' + css + '">' +
+      '<input id="authPass" type="password" name="password" autocomplete="current-password" placeholder="Password" required style="' + css + '">' +
+      '<div id="authMsg" style="min-height:18px;font-size:13px;color:#f87171;margin:2px 0 12px;line-height:1.4;"></div>' +
+      '<button id="authBtn" type="submit" style="width:100%;padding:13px;border-radius:9px;border:none;background:' + AUTH_ACCENT + ';color:#0f0e0c;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;">Entra</button>' +
+      '</form></div>');
+    bg = document.getElementById('authBg');
+  }
+  document.getElementById('authMsg').textContent = msg || '';
+  if (bg.style.display !== 'flex') {
+    bg.style.display = 'flex';
+    setTimeout(function(){ var e = document.getElementById('authEmail'); if (e && !e.value) { try { e.focus(); } catch(x){} } }, 200);
+  }
+}
+function authHide(){ var bg = document.getElementById('authBg'); if (bg) bg.style.display = 'none'; }
+
+function authSubmit(ev){
+  if (ev && ev.preventDefault) ev.preventDefault();
+  var em = document.getElementById('authEmail').value.trim();
+  var pw = document.getElementById('authPass').value;
+  var msg = document.getElementById('authMsg'), btn = document.getElementById('authBtn');
+  if (!em || !pw) { msg.textContent = 'Inserisci email e password.'; return false; }
+  btn.disabled = true; btn.textContent = 'Accesso in corso…'; msg.textContent = '';
+  authLogin(em, pw).then(function(){
+    document.getElementById('authPass').value = '';
+    btn.disabled = false; btn.textContent = 'Entra';
+    authHide(); authOnLogin();
+  }).catch(function(e){
+    btn.disabled = false; btn.textContent = 'Entra';
+    var m = (e && e.message) || '';
+    if (!e || !e.api) msg.textContent = 'Nessuna connessione: controlla internet e riprova.';
+    else if (/INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND|INVALID_EMAIL|MISSING_PASSWORD/.test(m)) msg.textContent = 'Email o password non corretti.';
+    else if (/TOO_MANY_ATTEMPTS/.test(m)) msg.textContent = 'Troppi tentativi: riprova tra qualche minuto.';
+    else if (/USER_DISABLED/.test(m)) msg.textContent = 'Questo accesso è stato disattivato.';
+    else if (/UTENTE_NON_AUTORIZZATO/.test(m)) msg.textContent = 'Questo utente non è autorizzato a usare l\'app.';
+    else msg.textContent = 'Accesso non riuscito (' + m + ').';
+  });
+  return false;
+}
+
+function authStart(){
+  if (PROVA) document.body.insertAdjacentHTML('beforeend', '<div style="position:fixed;left:0;right:0;bottom:0;z-index:2147483001;background:#b45309;color:#fff;font:700 12px/1.2 sans-serif;text-align:center;padding:6px;letter-spacing:1px;pointer-events:none;">VERSIONE DI PROVA · dati di prova</div>');
+  if (authHasSession()) authOnLogin(); else authShow();
+}
+var FBP = PROVA ? '/prova' : '';   // la pagina di prova usa una copia dei dati
+function authOnLogin(){ loadFB(); }
 
 // ── STATO ─────────────────────────────────────────────────────────────
 var NOW = new Date();
@@ -423,8 +545,18 @@ function restBalance(){
 }
 
 // ── FIREBASE ──────────────────────────────────────────────────────────
-function fbGet(p){ return fetch(FB+p+'.json').then(function(r){return r.json();}); }
-function fbSet(p,d){ return fetch(FB+p+'.json',{method:'PUT',body:JSON.stringify(d)}).then(function(r){return r.json();}); }
+function fbReq(p,opt){
+  return authToken().then(function(tok){
+    if(!tok){ var e=new Error('NOAUTH'); e.noauth=true; throw e; }
+    return fetch(FB+FBP+p+'.json?auth='+encodeURIComponent(tok),opt);
+  }).then(function(r){
+    if(r.status===401||r.status===403){ var e=new Error('HTTP '+r.status); e.denied=true; throw e; }
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  });
+}
+function fbGet(p){ return fbReq(p); }
+function fbSet(p,d){ return fbReq(p,{method:'PUT',body:JSON.stringify(d)}); }
 
 function payload(){
   return {
@@ -476,19 +608,22 @@ function saveFB(){
     nm['b'+now]={ts:now,label:new Date().toLocaleString('it-IT'),dayStr:ts,data:p};
     td.forEach(function(b){nm[b.key]=b;});
     prevDays.forEach(function(d){nm[prevMap[d].key]=prevMap[d];});
-    fbSet('/backups',nm).then(function(){
-      fbSet('/dati',p).then(function(){
-        setSync('✓ Sincronizzato · '+new Date().toLocaleTimeString('it-IT'),'ok');
-        localStorage.setItem('turni_v1',JSON.stringify(p));
-      }).catch(function(){ setSync('⚠️ Errore salvataggio — dati locali al sicuro','err'); });
-    }).catch(function(){ setSync('⚠️ Errore backup — riprovo...','err'); });
+    fbSet('/backups',nm).then(function(){ salvaDati('✓ Sincronizzato · '); },
+                              function(){ salvaDati('✓ Sincronizzato (backup non disponibile) · '); });
   }).catch(function(){
     // Anche senza backup, salva i dati principali
-    fbSet('/dati',p).then(function(){
-      setSync('✓ Sincronizzato (backup non disponibile) · '+new Date().toLocaleTimeString('it-IT'),'ok');
-      localStorage.setItem('turni_v1',JSON.stringify(p));
-    }).catch(function(){ setSync('⚠️ Firebase non raggiungibile — dati salvati solo in locale!','err'); });
+    salvaDati('✓ Sincronizzato (backup non disponibile) · ');
   });
+  function salvaDati(okMsg){
+    fbSet('/dati',p).then(function(){
+      setSync(okMsg+new Date().toLocaleTimeString('it-IT'),'ok');
+      localStorage.setItem('turni_v1',JSON.stringify(p));
+    }).catch(function(e){
+      try{ localStorage.setItem('turni_v1',JSON.stringify(p)); }catch(x){}
+      setSync('⚠️ Firebase non raggiungibile — dati salvati solo in locale!','err');
+      if(e&&e.denied) authDenied();
+    });
+  }
 }
 
 function loadFB(){
@@ -519,7 +654,9 @@ function loadFB(){
       if(Object.keys(ov).length>0) saveFB(); // carica i dati locali su Firebase
     }
     render();
-  }).catch(function(){
+  }).catch(function(e){
+    if(e&&e.noauth&&!authHasSession()){ setSync('🔒 Accesso richiesto',''); loadLS(); render(); return; }
+    if(e&&e.denied){ setSync('🔒 Accesso non valido','err'); loadLS(); render(); authDenied(); return; }
     setSync('⚠️ Firebase non raggiungibile — lavoro in modalità offline','err');
     loadLS(); render();
     // Riprova ogni 30 secondi
@@ -570,7 +707,7 @@ function restBak(key){
   fbGet('/backups').then(function(data){
     var b=data[key]; if(!b){alert('Non trovato');return;}
     apply(b.data); render(); saveFB(); showTab(0); alert('Ripristinato!');
-  });
+  }).catch(function(){ alert('Errore di connessione: backup non letto.'); });
 }
 
 // ── UI ────────────────────────────────────────────────────────────────
@@ -914,7 +1051,7 @@ function aggiorna(event){
 }
 
 // ── AVVIO ─────────────────────────────────────────────────────────────
-loadLS(); render(); loadFB();
+loadLS(); render(); authStart();
 </script>
 </body>
 </html>
