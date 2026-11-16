@@ -168,7 +168,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 <div class="hdr">
   <div>
     <div class="title">Turni</div>
-    <div class="subtitle">Calendario lavoro · Due soci ✓ · v28</div>
+    <div class="subtitle">Calendario lavoro · Due soci ✓ · v29</div>
   </div>
   <div class="nav">
     <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
@@ -343,6 +343,32 @@ function authToken(){
   }).catch(function(){ _authRefreshing = null; return ancoraBuono(); });
   return _authRefreshing;
 }
+
+// Compatibilità con il backup automatico: una lettura diretta del database fatta dalla pagina senza gettone
+// riceve il gettone di questo dispositivo. Se l'accesso manca o viene rifiutato la lettura FALLISCE,
+// così non vengono mai salvati dati sbagliati al posto di quelli veri.
+var AUTH_DB = 'https://turni-lavoro-52db4-default-rtdb.europe-west1.firebasedatabase.app';       // indirizzo del database di questa app
+var AUTH_RTDB = true;     // true = Realtime Database (gettone nell'indirizzo), false = Firestore (gettone nell'intestazione)
+(function(){
+  var orig = window.fetch;
+  window.fetch = function(input, init){
+    var u = (typeof input === 'string') ? input : '';
+    if (!u || u.indexOf(AUTH_DB) !== 0) return orig.apply(this, arguments);
+    var h = (init && init.headers) || {};
+    if (/[?&]auth=/.test(u) || h.Authorization || h.authorization) return orig.apply(this, arguments);
+    return authToken().then(function(tok){
+      if (!tok) throw new TypeError('Accesso mancante: lettura del database non eseguita');
+      var o = {}, k;
+      for (k in (init || {})) o[k] = init[k];
+      if (AUTH_RTDB) { u = u + (u.indexOf('?') < 0 ? '?' : '&') + 'auth=' + encodeURIComponent(tok); }
+      else { var hh = {}; for (k in h) hh[k] = h[k]; hh.Authorization = 'Bearer ' + tok; o.headers = hh; }
+      return orig.call(window, u, o);
+    }).then(function(r){
+      if (r.status === 401 || r.status === 403) throw new TypeError('Accesso rifiutato dal database (' + r.status + ')');
+      return r;
+    });
+  };
+})();
 
 function authDenied(){ authClear(); authShow('Accesso non valido: inserisci di nuovo email e password.'); }
 
