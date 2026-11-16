@@ -168,7 +168,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 <div class="hdr">
   <div>
     <div class="title">Turni</div>
-    <div class="subtitle">Calendario lavoro · Due soci ✓ · v29</div>
+    <div class="subtitle">Calendario lavoro · Due soci ✓ · v30</div>
   </div>
   <div class="nav">
     <button class="nav-btn" onclick="changeMonth(-1)">&#8592;</button>
@@ -530,7 +530,8 @@ function yearlyCov(){
 
 function yearlyWorked(){
   var start=new Date(cy,0,1);
-  var end=new Date(TODAY);
+  var fineAnno=new Date(cy,11,31);
+  var end=(fineAnno<TODAY)?fineAnno:new Date(TODAY); // anno passato: fino al 31 dicembre; anno in corso: fino a oggi
   var wm=0,ws=0;
   var cur=new Date(start);
   while(cur<=end){
@@ -563,7 +564,7 @@ function nonWorkedUpTo(endDate){
 function restBalance(){
   var totNow=nonWorkedUpTo(TODAY);
   var diffNow=(totNow.vs-totNow.vm)+ib; // positivo = Silvano ha più riposo; +ib saldo pre-tracciamento
-  var lastDayPrevYear=new Date(cy-1,11,31);
+  var lastDayPrevYear=new Date(TODAY.getFullYear()-1,11,31);
   var totPrev=nonWorkedUpTo(lastDayPrevYear);
   var diffPrev=(totPrev.vs-totPrev.vm)+ib;
   var diffThisYear=diffNow-diffPrev;
@@ -606,51 +607,163 @@ function setSync(msg,cls){
   el.textContent=msg; el.className='sync'+(cls?' '+cls:'');
 }
 
+// ── UNIONE DELLE MODIFICHE (uso da due dispositivi) ───────────────────
+var baseData=null;      // ultimi dati allineati con il server
+var srvHadData=false;   // il server aveva dati: non si salva mai un calendario vuoto al loro posto
+var saving=false, saveAgain=false;
+
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+// testo canonico (chiavi ordinate) per confrontare i dati senza dipendere dall'ordine delle chiavi
+function canon(v){ return Array.isArray(v)?'['+v.map(canon).join(',')+']':(v&&typeof v==='object')?'{'+Object.keys(v).sort().map(function(k){return JSON.stringify(k)+':'+canon(v[k]);}).join(',')+'}':JSON.stringify(v===undefined?null:v); }
+// stessa forma dei dati che scrive payload(), qualunque sia la provenienza
+function norm(d){
+  d=d?clone(d):{};   // sempre una copia: mai lo stesso oggetto che l'app sta modificando
+  function iso(x){ var t=new Date(x); return isNaN(t)?String(x):t.toISOString(); }
+  function arr(a){ return Array.isArray(a)?a.filter(function(x){return x!=null;}):(a&&typeof a==='object')?Object.keys(a).map(function(k){return a[k];}).filter(function(x){return x!=null;}):[]; }
+  return {
+    overrides:(d.overrides&&typeof d.overrides==='object')?d.overrides:{},
+    vacations:arr(d.vacations).map(function(v){return {id:v.id,who:v.who,from:iso(v.from),to:iso(v.to),workDays:v.workDays,days:arr(v.days),dest:v.dest||''};}),
+    swaps:arr(d.swaps),
+    swapDates:arr(d.swapDates).map(function(s){return {id:s.id,date:iso(s.date)};}),
+    notes:(d.notes&&typeof d.notes==='object')?d.notes:{},
+    uid:d.uid||1, ib:(typeof d.ib==='number')?d.ib:13
+  };
+}
+function hasDati(p){ return !!p&&(Object.keys(p.overrides||{}).length>0||(p.vacations||[]).length>0||Object.keys(p.notes||{}).length>0||(p.swaps||[]).length>0); }
+function byId(a){ var m={}; a.forEach(function(x){ m[x.id]=x; }); return m; }
+// b = base (ultimo stato comune), l = questo dispositivo, s = server adesso
+function mergeMap(b,l,s){
+  var out={}, k;
+  for(k in s) out[k]=s[k];
+  for(k in l) if(canon(l[k])!==canon(b[k])) out[k]=l[k];   // aggiunto o cambiato qui
+  for(k in b) if(!(k in l)) delete out[k];                  // cancellato qui
+  return out;
+}
+function mergeList(b,l,s){
+  var bm=byId(b), lm=byId(l), sm=byId(s), out=[];
+  s.forEach(function(x){
+    if((x.id in bm)&&!(x.id in lm)) return;                                         // cancellato qui
+    if((x.id in lm)&&canon(lm[x.id])!==canon(bm[x.id])) out.push(lm[x.id]);         // cambiato qui
+    else out.push(x);
+  });
+  l.forEach(function(x){ if(!(x.id in sm)&&!(x.id in bm)) out.push(x); });          // aggiunto qui
+  return out;
+}
+function merge3(b,l,s){
+  b=norm(b); l=norm(clone(l)); s=norm(s);
+  var next=Math.max(l.uid||1,s.uid||1);
+  [l.vacations,l.swaps,l.swapDates,s.vacations,s.swaps,s.swapDates].forEach(function(a){ a.forEach(function(x){ if(typeof x.id==='number'&&x.id>=next) next=x.id+1; }); });
+  // due dispositivi hanno creato nello stesso momento un elemento con lo stesso numero: quello di qui prende un numero nuovo
+  var bv=byId(b.vacations), sv=byId(s.vacations), bs=byId(b.swaps), ss=byId(s.swaps);
+  l.vacations.forEach(function(x){ if(!(x.id in bv)&&(x.id in sv)&&canon(sv[x.id])!==canon(x)) x.id=next++; });
+  l.swaps.forEach(function(x){
+    if(!(x.id in bs)&&(x.id in ss)&&canon(ss[x.id])!==canon(x)){
+      var old=x.id, nu=next++; x.id=nu;
+      l.swapDates.forEach(function(y){ if(y.id===old) y.id=nu; });
+    }
+  });
+  return {
+    overrides:mergeMap(b.overrides,l.overrides,s.overrides),
+    vacations:mergeList(b.vacations,l.vacations,s.vacations),
+    swaps:mergeList(b.swaps,l.swaps,s.swaps),
+    swapDates:mergeList(b.swapDates,l.swapDates,s.swapDates),
+    notes:mergeMap(b.notes,l.notes,s.notes),
+    uid:next, ib:(l.ib!==b.ib)?l.ib:s.ib
+  };
+}
+function ridisegna(){
+  render();
+  for(var i=1;i<4;i++){ if(document.getElementById('panel'+i).classList.contains('active')&&i<3) showTab(i); }
+}
+
 function saveFB(){
   if(!fbOk) return;
-  var p=payload(), now=Date.now(), ts=tdStr();
-  // Protezione: non salvare se i dati sembrano vuoti
-  var hasData=Object.keys(p.overrides||{}).length>0||
-              (p.vacations&&p.vacations.length>0)||
-              Object.keys(p.notes||{}).length>0;
-  fbGet('/backups').then(function(ex){
-    var map=ex||{};
-    var list=Object.entries(map).map(function(e){
-      return {key:e[0],ts:e[1].ts,label:e[1].label,dayStr:e[1].dayStr,data:e[1].data};
+  if(saving){ saveAgain=true; return; }
+  saving=true;
+  var now=Date.now(), ts=tdStr();
+  function fine(){ saving=false; if(saveAgain){ saveAgain=false; saveFB(); } }
+  // 1) leggo lo stato attuale del server e unisco le modifiche fatte nel frattempo da un altro dispositivo
+  fbGet('/dati').then(function(srv){ return {ok:true,srv:srv}; },function(e){ return {ok:false,err:e}; }).then(function(r){
+    var loc=norm(payload()), p=loc, unito=false;
+    if(r.ok){
+      if(hasDati(norm(r.srv))) srvHadData=true;
+      if(baseData){
+        p=merge3(baseData,loc,r.srv);
+        if(canon(p)!==canon(loc)){ unito=true; apply(clone(p)); ridisegna(); }
+      }
+    }
+    // 2) protezione: mai salvare un calendario vuoto al posto di dati esistenti
+    if(!hasDati(p)&&srvHadData){
+      setSync('⚠️ Salvataggio bloccato: il calendario risulta vuoto. Ricarica la pagina.','err');
+      fine(); return;
+    }
+    var okTxt=unito?'✓ Sincronizzato (unite le modifiche dell\'altro dispositivo) · ':'✓ Sincronizzato · ';
+    function salvaDati(okMsg){
+      fbSet('/dati',p).then(function(){
+        baseData=clone(p); if(hasDati(p)) srvHadData=true;
+        setSync(okMsg+new Date().toLocaleTimeString('it-IT'),'ok');
+        localStorage.setItem('turni_v1',JSON.stringify(p));
+        fine();
+      }).catch(function(e){
+        try{ localStorage.setItem('turni_v1',JSON.stringify(p)); }catch(x){}
+        setSync('⚠️ Firebase non raggiungibile — dati salvati solo in locale!','err');
+        if(e&&e.denied) authDenied();
+        fine();
+      });
+    }
+    // 3) backup interno e poi dati principali (come prima)
+    fbGet('/backups').then(function(ex){
+      var map=ex||{};
+      var list=Object.entries(map).map(function(e){
+        return {key:e[0],ts:e[1].ts,label:e[1].label,dayStr:e[1].dayStr,data:e[1].data};
+      });
+      // Backup di oggi: tieni ultimi 9
+      var td=list.filter(function(b){return b.dayStr===ts;})
+                .sort(function(a,b){return b.ts-a.ts;}).slice(0,8);
+      // Backup giorni precedenti: tieni 1 per giorno per gli ultimi 30 giorni
+      var prevMap={};
+      list.filter(function(b){return b.dayStr!==ts;})
+          .sort(function(a,b){return b.ts-a.ts;})
+          .forEach(function(b){
+            if(!prevMap[b.dayStr]) prevMap[b.dayStr]=b; // tieni solo il più recente per ogni giorno
+          });
+      // Tieni solo i 30 giorni più recenti
+      var prevDays=Object.keys(prevMap).sort().reverse().slice(0,30);
+      var nm={};
+      nm['b'+now]={ts:now,label:new Date().toLocaleString('it-IT'),dayStr:ts,data:p};
+      td.forEach(function(b){nm[b.key]=b;});
+      prevDays.forEach(function(d){nm[prevMap[d].key]=prevMap[d];});
+      fbSet('/backups',nm).then(function(){ salvaDati(okTxt); },
+                                function(){ salvaDati('✓ Sincronizzato (backup non disponibile) · '); });
+    }).catch(function(){
+      // Anche senza backup, salva i dati principali
+      salvaDati('✓ Sincronizzato (backup non disponibile) · ');
     });
-    // Backup di oggi: tieni ultimi 9
-    var td=list.filter(function(b){return b.dayStr===ts;})
-              .sort(function(a,b){return b.ts-a.ts;}).slice(0,8);
-    // Backup giorni precedenti: tieni 1 per giorno per gli ultimi 30 giorni
-    var prevMap={};
-    list.filter(function(b){return b.dayStr!==ts;})
-        .sort(function(a,b){return b.ts-a.ts;})
-        .forEach(function(b){
-          if(!prevMap[b.dayStr]) prevMap[b.dayStr]=b; // tieni solo il più recente per ogni giorno
-        });
-    // Tieni solo i 30 giorni più recenti
-    var prevDays=Object.keys(prevMap).sort().reverse().slice(0,30);
-    var nm={};
-    nm['b'+now]={ts:now,label:new Date().toLocaleString('it-IT'),dayStr:ts,data:p};
-    td.forEach(function(b){nm[b.key]=b;});
-    prevDays.forEach(function(d){nm[prevMap[d].key]=prevMap[d];});
-    fbSet('/backups',nm).then(function(){ salvaDati('✓ Sincronizzato · '); },
-                              function(){ salvaDati('✓ Sincronizzato (backup non disponibile) · '); });
-  }).catch(function(){
-    // Anche senza backup, salva i dati principali
-    salvaDati('✓ Sincronizzato (backup non disponibile) · ');
   });
-  function salvaDati(okMsg){
-    fbSet('/dati',p).then(function(){
-      setSync(okMsg+new Date().toLocaleTimeString('it-IT'),'ok');
-      localStorage.setItem('turni_v1',JSON.stringify(p));
-    }).catch(function(e){
-      try{ localStorage.setItem('turni_v1',JSON.stringify(p)); }catch(x){}
-      setSync('⚠️ Firebase non raggiungibile — dati salvati solo in locale!','err');
-      if(e&&e.denied) authDenied();
-    });
-  }
 }
+
+// Quando l'app torna in primo piano (e ogni minuto) rilegge i dati: così si vedono le modifiche dell'altro dispositivo
+var ultimoAgg=0;
+function aggiornaDaServer(){
+  if(!fbOk||saving||mKey||selMode||document.hidden||!authHasSession()) return;
+  if(Date.now()-ultimoAgg<5000) return;
+  ultimoAgg=Date.now();
+  if(baseData&&canon(norm(payload()))!==canon(baseData)){ saveFB(); return; }   // modifiche di qui non ancora arrivate al server: riprovo (il salvataggio unisce)
+  fbGet('/dati').then(function(srv){
+    if(saving||mKey||selMode||!baseData) return;
+    var s=norm(srv);
+    if(!hasDati(s)) return;                                  // mai sostituire i dati con un vuoto
+    if(canon(s)===canon(baseData)) return;                   // niente di nuovo
+    if(canon(norm(payload()))!==canon(baseData)) return;     // nel frattempo è cambiato qualcosa qui: ci pensa il salvataggio
+    apply(clone(s)); baseData=norm(payload()); srvHadData=true;
+    localStorage.setItem('turni_v1',JSON.stringify(s));
+    ridisegna();
+    setSync('✓ Aggiornato · '+new Date().toLocaleTimeString('it-IT'),'ok');
+  }).catch(function(e){ if(e&&e.denied) authDenied(); });
+}
+document.addEventListener('visibilitychange',function(){ if(!document.hidden) aggiornaDaServer(); });
+window.addEventListener('focus',aggiornaDaServer);
+setInterval(aggiornaDaServer,60000);
 
 function loadFB(){
   setSync('⏳ Caricamento...','');
@@ -666,16 +779,17 @@ function loadFB(){
       if(!fbHasData && localHasData){
         // Firebase vuoto ma locale ha dati: usa locale e carica su Firebase
         setSync('⚠️ Firebase vuoto — ripristino da locale...','err');
-        loadLS(); fbOk=true; render();
+        loadLS(); fbOk=true; baseData=norm({}); render();
         setTimeout(function(){ saveFB(); },1000);
         return;
       }
       apply(data);
+      baseData=norm(payload()); if(hasDati(baseData)) srvHadData=true;
       localStorage.setItem('turni_v1',JSON.stringify(data));
       fbOk=true;
       setSync('✓ Dati caricati · '+new Date().toLocaleTimeString('it-IT'),'ok');
     } else {
-      loadLS(); fbOk=true;
+      loadLS(); fbOk=true; baseData=norm({});
       setSync('✓ Connesso (nessun dato su Firebase)','ok');
       if(Object.keys(ov).length>0) saveFB(); // carica i dati locali su Firebase
     }
@@ -971,9 +1085,7 @@ function salvaFerie(chi){
 function analizza(who, days){
   var inv=(who==='silvano'), cL=0, aL=0;
   days.forEach(function(k){
-    var p=k.split('-').map(Number), d=new Date(p[0],p[1]-1,p[2]);
-    var dU=Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()), aU=Date.UTC(2026,2,8);
-    var diff=Math.round((dU-aU)/86400000), base=CYCLE[((diff%14)+14)%14];
+    var base=isWork(kd(k)); // turno naturale del giorno, cambi turno compresi
     if(inv?!base:base) cL++; if(inv?base:!base) aL++;
   });
   return {vant:aL>cL};
